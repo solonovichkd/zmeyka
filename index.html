@@ -25,7 +25,6 @@ canvas{display:block;background:#0a0a12;border-radius:14px}
 .hud-left{display:flex;flex-direction:column;gap:4px}
 .score-box{font-size:1.2rem;font-weight:700;color:#00f260}
 .best-box{font-size:.85rem;color:#888}
-.best-box .reset-best{color:#ff4757;cursor:pointer;font-size:.8rem;margin-left:8px;text-decoration:underline}
 .new-record{color:#ffd700;font-weight:700;display:none}
 .controls-hint{margin-top:16px;font-size:.85rem;color:#666;text-align:center}
 .overlay{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.75);border-radius:14px;gap:10px}
@@ -47,6 +46,7 @@ canvas{display:block;background:#0a0a12;border-radius:14px}
 </style>
 </head>
 <body>
+
 <div id="menu">
 <h1>🐍 Змейка</h1>
 <p class="subtitle">Выбери режим и играй!</p>
@@ -56,13 +56,14 @@ canvas{display:block;background:#0a0a12;border-radius:14px}
 <div class="menu-card" data-mode="immortal"><div class="icon">♾️</div><h2>Бессмертная</h2><p>При столкновении счёт сбрасывается, змея начинает заново.</p></div>
 </div>
 </div>
+
 <div id="game-screen">
 <h2 id="game-title"></h2>
 <p class="subtitle" id="game-desc"></p>
 <div class="hud">
 <div class="hud-left">
 <div class="score-box">Счёт: <span id="score">0</span></div>
-<div class="best-box">Рекорд: <span id="best">0</span> <span class="new-record">Новый рекорд!</span> <span class="reset-best" onclick="resetBest()">(сбросить)</span></div>
+<div class="best-box">Рекорд: <span id="best">0</span> <span class="new-record">Новый рекорд!</span></div>
 </div>
 <button class="btn" onclick="restartGame()">Заново</button>
 </div>
@@ -83,7 +84,9 @@ canvas{display:block;background:#0a0a12;border-radius:14px}
 <button class="btn" onclick="backToMenu()" style="margin-top:12px">← В меню</button>
 <div class="sponsor">Игра создана при поддержке ООО «ТМЫВ ДЕНЕГ»</div>
 </div>
+
 <div class="toast" id="toast"></div>
+
 <script>
 const canvas=document.getElementById('game');
 const ctx=canvas.getContext('2d');
@@ -91,6 +94,8 @@ const N=20,TS=20;
 let snake,dir,nextDir,food,score,running,loop,speed,mode;
 let best=+localStorage.getItem('snakeBest')||0;
 document.getElementById('best').textContent=best;
+
+// Косметика
 let accessories={
   crown:{name:'Корона',unlocked:true,color:'#ffd700'},
   horns:{name:'Рога',unlocked:false,color:'#8b0000'},
@@ -102,8 +107,20 @@ let activeAcc='crown';
 let snakeColor=localStorage.getItem('snakeColor')||'#0f0';
 let neonMode=localStorage.getItem('snakeNeon')==='true';
 let rainbowMode=localStorage.getItem('snakeRainbow')==='true';
-Object.keys(accessories).forEach(k=>{if(localStorage.getItem('snakeAcc_'+k)==='true')accessories[k].unlocked=true});
-const modes={classic:{title:'Классическая',desc:'Стены и хвост убивают'},accelerate:{title:'С ускорением',desc:'С каждым куском змейка быстрее'},immortal:{title:'Бессмертная',desc:'Сброс при столкновении, игра продолжается'}};
+
+// Загружаем разблокированные аксессуары
+Object.keys(accessories).forEach(k=>{
+  if(localStorage.getItem('snakeAcc_'+k)==='true')accessories[k].unlocked=true;
+});
+
+// Режимы
+const modes={
+  classic:{title:'Классическая',desc:'Стены и хвост убивают'},
+  accelerate:{title:'С ускорением',desc:'С каждым куском змейка быстрее'},
+  immortal:{title:'Бессмертная',desc:'Сброс при столкновении, игра продолжается'}
+};
+
+// Меню
 document.querySelectorAll('.menu-card').forEach(card=>{
   card.addEventListener('click',()=>{
     mode=card.dataset.mode;
@@ -111,10 +128,19 @@ document.querySelectorAll('.menu-card').forEach(card=>{
     document.getElementById('game-screen').style.display='flex';
     document.getElementById('game-title').textContent=modes[mode].title;
     document.getElementById('game-desc').textContent=modes[mode].desc;
-    buildAccBar();startGame();
+    buildAccBar();
+    startGame();
   });
 });
-function backToMenu(){if(loop)clearInterval(loop);running=false;document.getElementById('overlay').classList.remove('show');document.getElementById('game-screen').style.display='none';document.getElementById('menu').style.display='block'}
+
+function backToMenu(){
+  if(loop)clearInterval(loop);
+  running=false;
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('game-screen').style.display='none';
+  document.getElementById('menu').style.display='block';
+}
+
 function startGame(){
   document.getElementById('overlay').classList.remove('show');
   snake=[{x:10,y:10},{x:9,y:10},{x:8,y:10}];
@@ -124,16 +150,16 @@ function startGame(){
   if(loop)clearInterval(loop);
   loop=setInterval(tick,speed);
 }
-function resetBest(){
-  if(confirm('Точно сбросить рекорд?')){
-    best=0;localStorage.setItem('snakeBest',0);
-    document.getElementById('best').textContent=0;
-    document.querySelector('.new-record').style.display='none';
-    showToast('Рекорд сброшен');
-  }
+
+function placeFood(){
+  do{food={x:(Math.random()*N)|0,y:(Math.random()*N)|0}}
+  while(snake.some(s=>s.x===food.x&&s.y===food.y));
 }
-function placeFood(){do{food={x:(Math.random()*N)|0,y:(Math.random()*N)|0}}while(snake.some(s=>s.x===food.x&&s.y===food.y))}
-function updateScore(){document.getElementById('score').textContent=score}
+
+function updateScore(){
+  document.getElementById('score').textContent=score;
+}
+
 function tick(){
   if(!running)return;
   dir=nextDir;
@@ -142,54 +168,95 @@ function tick(){
     if(head.x<0||head.x>=N||head.y<0||head.y>=N||snake.some(s=>s.x===head.x&&s.y===head.y)){
       score=0;updateScore();
       snake=[{x:10,y:10},{x:9,y:10},{x:8,y:10}];
-      dir={x:1,y:0};nextDir={x:1,y:0};return;
+      dir={x:1,y:0};nextDir={x:1,y:0};
+      return;
     }
   }else{
     if(head.x<0||head.x>=N||head.y<0||head.y>=N||snake.some(s=>s.x===head.x&&s.y===head.y)){
       running=false;clearInterval(loop);
       if(score>best){
-        best=score;localStorage.setItem('snakeBest',best);
+        best=score;
+        localStorage.setItem('snakeBest',best);
         document.getElementById('best').textContent=best;
         document.querySelector('.new-record').style.display='inline';
         setTimeout(()=>document.querySelector('.new-record').style.display='none',2000);
       }
       document.getElementById('final-score').textContent=score;
-      document.getElementById('overlay').classList.add('show');return;
+      score=0;updateScore(); // сброс счёта после смерти
+      document.getElementById('overlay').classList.add('show');
+      return;
     }
   }
   snake.unshift(head);
   if(head.x===food.x&&head.y===food.y){
     score+=10;updateScore();placeFood();
-    if(mode==='accelerate'){speed=Math.max(500,speed-10);clearInterval(loop);loop=setInterval(tick,speed)}
+    if(mode==='accelerate'){speed=Math.max(500,speed-20);clearInterval(loop);loop=setInterval(tick,speed)}
   }else{snake.pop()}
   draw();
 }
+
 function draw(){
-  ctx.clearRect(0,0,400,400);ctx.fillStyle='#0a0a12';ctx.fillRect(0,0,400,400);
-  ctx.fillStyle='#e94560';ctx.beginPath();ctx.arc(food.x*TS+10,food.y*TS+10,8,0,Math.PI*2);ctx.fill();
+  ctx.clearRect(0,0,400,400);
+  ctx.fillStyle='#0a0a12';ctx.fillRect(0,0,400,400);
+  // еда
+  ctx.fillStyle='#e94560';
+  ctx.beginPath();ctx.arc(food.x*TS+10,food.y*TS+10,8,0,Math.PI*2);ctx.fill();
+  // змейка
   snake.forEach((s,i)=>{
     let col=snakeColor;
     if(rainbowMode){col=`hsl(${(i*30)%360},100%,50%)`}
     if(neonMode){ctx.shadowBlur=15;ctx.shadowColor=col}
-    ctx.fillStyle=col;ctx.fillRect(s.x*TS+1,s.y*TS+1,TS-2,TS-2);
+    ctx.fillStyle=i===0?col:col;
+    ctx.fillRect(s.x*TS+1,s.y*TS+1,TS-2,TS-2);
     if(neonMode)ctx.shadowBlur=0;
   });
+  // аксессуар на голове
   if(activeAcc&&accessories[activeAcc])drawAccessory(snake[0]);
 }
+
 function drawAccessory(head){
   const cx=head.x*TS+10,cy=head.y*TS+10;
   const angle=Math.atan2(dir.y,dir.x);
   ctx.save();ctx.translate(cx,cy);ctx.rotate(angle);
   ctx.fillStyle=accessories[activeAcc].color;
-  if(activeAcc==='crown'){ctx.beginPath();ctx.moveTo(-10,-2);ctx.lineTo(-7,-10);ctx.lineTo(0,-5);ctx.lineTo(7,-10);ctx.lineTo(10,-2);ctx.closePath();ctx.fill()}
-  else if(activeAcc==='horns'){ctx.beginPath();ctx.moveTo(-8,0);ctx.lineTo(-12,-8);ctx.lineTo(-6,-3);ctx.closePath();ctx.fill();ctx.beginPath();ctx.moveTo(8,0);ctx.lineTo(12,-8);ctx.lineTo(6,-3);ctx.closePath();ctx.fill()}
-  else if(activeAcc==='halo'){ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,-8,7,0,Math.PI*2);ctx.stroke()}
-  else if(activeAcc==='star'){ctx.beginPath();for(let j=0;j<5;j++){const a=(j*4*Math.PI/5)-Math.PI/2;const r=j%2===0?8:4;ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r)}ctx.closePath();ctx.fill()}
-  else if(activeAcc==='coffee'){ctx.beginPath();ctx.moveTo(-6,0);ctx.lineTo(-4,-10);ctx.lineTo(4,-10);ctx.lineTo(6,0);ctx.closePath();ctx.fill();ctx.strokeStyle=accessories[activeAcc].color;ctx.lineWidth=2;ctx.beginPath();ctx.arc(7,-5,4,-0.5,2.5);ctx.stroke();ctx.strokeStyle='rgba(200,200,200,.5)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(-3,-12);ctx.quadraticCurveTo(-1,-15,-3,-18);ctx.stroke();ctx.beginPath();ctx.moveTo(2,-12);ctx.quadraticCurveTo(4,-15,2,-18);ctx.stroke()}
+  if(activeAcc==='crown'){
+    ctx.beginPath();ctx.moveTo(-10,-2);ctx.lineTo(-7,-10);ctx.lineTo(0,-5);ctx.lineTo(7,-10);ctx.lineTo(10,-2);ctx.closePath();ctx.fill();
+  }else if(activeAcc==='horns'){
+    ctx.beginPath();ctx.moveTo(-8,0);ctx.lineTo(-12,-8);ctx.lineTo(-6,-3);ctx.closePath();ctx.fill();
+    ctx.beginPath();ctx.moveTo(8,0);ctx.lineTo(12,-8);ctx.lineTo(6,-3);ctx.closePath();ctx.fill();
+  }else if(activeAcc==='halo'){
+    ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,-8,7,0,Math.PI*2);ctx.stroke();
+  }else if(activeAcc==='star'){
+    ctx.beginPath();
+    for(let j=0;j<5;j++){const a=(j*4*Math.PI/5)-Math.PI/2;const r=j%2===0?8:4;ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r)}
+    ctx.closePath();ctx.fill();
+  }else if(activeAcc==='coffee'){
+    ctx.beginPath();ctx.moveTo(-6,0);ctx.lineTo(-4,-10);ctx.lineTo(4,-10);ctx.lineTo(6,0);ctx.closePath();ctx.fill();
+    ctx.strokeStyle=accessories[activeAcc].color;ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(7,-5,4,-0.5,2.5);ctx.stroke();
+    ctx.strokeStyle='rgba(200,200,200,.5)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(-3,-12);ctx.quadraticCurveTo(-1,-15,-3,-18);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(2,-12);ctx.quadraticCurveTo(4,-15,2,-18);ctx.stroke();
+  }
   ctx.restore();
 }
-function buildAccBar(){const bar=document.getElementById('acc-bar');bar.innerHTML='';Object.keys(accessories).forEach(k=>{const a=accessories[k];if(!a.unlocked)return;const btn=document.createElement('div');btn.className='acc-btn'+(k===activeAcc?' active':'');btn.textContent=a.name;btn.onclick=()=>{activeAcc=k;buildAccBar()};bar.appendChild(btn)})}
+
+function buildAccBar(){
+  const bar=document.getElementById('acc-bar');bar.innerHTML='';
+  Object.keys(accessories).forEach(k=>{
+    const a=accessories[k];
+    if(!a.unlocked)return;
+    const btn=document.createElement('div');
+    btn.className='acc-btn'+(k===activeAcc?' active':'');
+    btn.textContent=a.name;
+    btn.onclick=()=>{activeAcc=k;buildAccBar()};
+    bar.appendChild(btn);
+  });
+}
+
 function restartGame(){startGame()}
+
+// Промокоды
 function redeemPromo(){
   const code=document.getElementById('promo').value.trim().toUpperCase();
   if(localStorage.getItem('snakePromo_'+code)){showToast('Уже активирован!');return}
@@ -200,9 +267,17 @@ function redeemPromo(){
   else if(code==='NEON'){neonMode=true;localStorage.setItem('snakeNeon','true');msg='Неон-режим активирован!'}
   else if(code==='RICKROLL'){rainbowMode=true;localStorage.setItem('snakeRainbow','true');msg='Радужный режим активирован!'}
   else{showToast('Неверный код');return}
-  localStorage.setItem('snakePromo_'+code,'true');showToast(msg);document.getElementById('promo').value='';
+  localStorage.setItem('snakePromo_'+code,'true');
+  showToast(msg);
+  document.getElementById('promo').value='';
 }
-function showToast(text){const t=document.getElementById('toast');t.textContent=text;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
+
+function showToast(text){
+  const t=document.getElementById('toast');t.textContent=text;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// Управление
 document.addEventListener('keydown',e=>{
   const k=e.key.toLowerCase();
   if(k==='arrowup'||k==='w'){if(dir.y!==1)nextDir={x:0,y:-1}}
@@ -210,13 +285,21 @@ document.addEventListener('keydown',e=>{
   else if(k==='arrowleft'||k==='a'){if(dir.x!==1)nextDir={x:-1,y:0}}
   else if(k==='arrowright'||k==='d'){if(dir.x!==-1)nextDir={x:1,y:0}}
 });
+
+// Свайпы
 let tx,ty;
 canvas.addEventListener('touchstart',e=>{e.preventDefault();tx=e.touches[0].clientX;ty=e.touches[0].clientY},{passive:false});
 canvas.addEventListener('touchend',e=>{
   e.preventDefault();
-  const dx=e.changedTouches[0].clientX-tx;const dy=e.changedTouches[0].clientY-ty;
-  if(Math.abs(dx)>Math.abs(dy)){if(dx>20&&dir.x!==-1)nextDir={x:1,y:0};else if(dx<-20&&dir.x!==1)nextDir={x:-1,y:0}}
-  else{if(dy>20&&dir.y!==-1)nextDir={x:0,y:1};else if(dy<-20&&dir.y!==1)nextDir={x:0,y:-1}}
+  const dx=e.changedTouches[0].clientX-tx;
+  const dy=e.changedTouches[0].clientY-ty;
+  if(Math.abs(dx)>Math.abs(dy)){
+    if(dx>20&&dir.x!==-1)nextDir={x:1,y:0};
+    else if(dx<-20&&dir.x!==1)nextDir={x:-1,y:0};
+  }else{
+    if(dy>20&&dir.y!==-1)nextDir={x:0,y:1};
+    else if(dy<-20&&dir.y!==1)nextDir={x:0,y:-1};
+  }
 },{passive:false});
 </script>
 </body>
