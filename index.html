@@ -1,1 +1,665 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Змейка — Проект для 5</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: linear-gradient(135deg,#0f0c29,#302b63,#24243e); color:#fff; min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow-x:hidden; }
+#menu { text-align:center; max-width:900px; width:100%; padding:40px 20px; animation:fadeIn .5s ease; z-index:10; position:relative; }
+#menu h1 { font-size:3rem; margin-bottom:8px; background:linear-gradient(135deg,#00f260,#0575e6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; text-shadow:0 0 30px rgba(0,242,96,.3); }
+#menu .subtitle { font-size:1.1rem; color:#888; margin-bottom:30px; }
+.menu-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; }
+@media (max-width:700px){ .menu-grid{ grid-template-columns:1fr; } }
+.menu-card { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); border-radius:18px; padding:30px 24px; cursor:pointer; transition:all .3s ease; text-align:center; user-select:none; -webkit-user-select:none; }
+.menu-card:hover { background:rgba(255,255,255,.12); transform:translateY(-6px); box-shadow:0 12px 40px rgba(0,0,0,.4); border-color:rgba(0,242,96,.4); }
+.menu-card.bump { transform:scale(1.08); background:rgba(255,215,0,.15); border-color:#ffd700; }
+.menu-card .icon { font-size:3rem; margin-bottom:14px; }
+.menu-card h2 { font-size:1.3rem; margin-bottom:8px; }
+.menu-card p { font-size:.85rem; color:#aaa; line-height:1.5; }
+#game-screen { display:none; flex-direction:column; align-items:center; width:100%; max-width:500px; padding:30px 20px; animation:fadeIn .4s ease; }
+#game-screen h2 { font-size:1.6rem; margin-bottom:4px; background:linear-gradient(135deg,#00f260,#0575e6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+#game-screen .subtitle { font-size:.9rem; color:#888; margin-bottom:18px; }
+.game-wrap { position:relative; border-radius:14px; overflow:hidden; box-shadow:0 0 40px rgba(0,242,96,.15),0 8px 32px rgba(0,0,0,.5); touch-action:none; }
+canvas { display:block; background:#0a0a12; border-radius:14px; }
+.hud { display:flex; justify-content:space-between; align-items:center; width:100%; max-width:460px; margin-bottom:12px; }
+.score-box { font-size:1.2rem; font-weight:700; color:#00f260; }
+.back-btn { background:rgba(255,255,255,.08); color:#fff; border:1px solid rgba(255,255,255,.2); padding:10px 22px; border-radius:10px; cursor:pointer; font-size:.95rem; }
+.back-btn:hover { background:rgba(255,255,255,.18); border-color:rgba(0,242,96,.5); }
+.restart-btn { background:linear-gradient(135deg,#00f260,#0575e6); color:#000; border:none; padding:10px 22px; border-radius:10px; cursor:pointer; font-weight:700; font-size:.95rem; margin-left:8px; }
+.restart-btn:hover { transform:scale(1.05); box-shadow:0 4px 20px rgba(0,242,96,.4); }
+.overlay { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(0,0,0,.75); border-radius:14px; gap:10px; z-index:10; }
+.overlay.hidden { display:none; }
+.overlay h3 { font-size:2rem; color:#ff4757; text-shadow:0 0 10px #000; text-align:center; }
+.overlay p { font-size:1.2rem; color:#fff; text-align:center; }
+.overlay .start-hint { font-size:1rem; color:#00f260; }
+.touch-controls { display:none; margin-top:20px; width:200px; height:200px; position:relative; }
+.touch-btn { position:absolute; width:64px; height:64px; border-radius:50%; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); color:#fff; font-size:1.5rem; display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none; -webkit-user-select:none; }
+.touch-btn:active { background:rgba(0,242,96,.3); }
+.touch-btn.up { top:0; left:50%; transform:translateX(-50%); }
+.touch-btn.down { bottom:0; left:50%; transform:translateX(-50%); }
+.touch-btn.left { top:50%; left:0; transform:translateY(-50%); }
+.touch-btn.right { top:50%; right:0; transform:translateY(-50%); }
+.footer-warning { margin-top:40px; padding:20px; background:rgba(0,0,0,.3); border-top:1px dashed #444; border-bottom:1px dashed #444; text-align:center; font-size:.85rem; line-height:1.4; color:#ff5252; max-width:500px; width:100%; }
+.footer-warning strong { color:#fff; }
+.footer-warning span { color:#ccc; font-style:italic; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+.settings-btn { position:absolute; top:20px; right:20px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.2); color:#fff; width:44px; height:44px; border-radius:50%; cursor:pointer; font-size:1.4rem; display:flex; align-items:center; justify-content:center; transition:all .2s; z-index:20; }
+.settings-btn:hover { background:rgba(255,255,255,.18); transform:rotate(60deg); }
+#settings-panel { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:100; align-items:center; justify-content:center; }
+#settings-panel.show { display:flex; }
+.settings-box { background:#1a1a2e; border:1px solid rgba(255,255,255,.15); border-radius:18px; padding:30px; max-width:420px; width:90%; animation:fadeIn .3s ease; max-height:90vh; overflow-y:auto; }
+.settings-box h2 { font-size:1.5rem; margin-bottom:24px; text-align:center; color:#00f260; }
+.settings-group { margin-bottom:28px; }
+.settings-group label { display:block; font-size:.95rem; color:#aaa; margin-bottom:12px; }
+.settings-options { display:flex; gap:10px; flex-wrap:wrap; }
+.settings-opt { background:rgba(255,255,255,.05); border:2px solid rgba(255,255,255,.1); color:#fff; padding:10px 18px; border-radius:10px; cursor:pointer; font-size:.9rem; transition:all .2s; user-select:none; }
+.settings-opt:hover { background:rgba(255,255,255,.12); }
+.settings-opt.active { border-color:#00f260; background:rgba(0,242,96,.15); color:#00f260; }
+.settings-close { width:100%; background:linear-gradient(135deg,#00f260,#0575e6); color:#000; border:none; padding:12px; border-radius:10px; cursor:pointer; font-weight:700; font-size:1rem; margin-top:10px; }
+.settings-close:hover { transform:scale(1.02); }
+</style>
+</head>
+<body>
 
+<div id="menu">
+  <button class="settings-btn" onclick="toggleSettings()">⚙️</button>
+  <h1>🐍 Змейка</h1>
+  <p class="subtitle">Выбери режим и играй!</p>
+  <div class="menu-grid">
+    <div class="menu-card" data-mode="classic">
+      <div class="icon">🎯</div>
+      <h2>Классическая</h2>
+      <p>Стены и хвост убивают. Набери максимум очков.</p>
+    </div>
+    <div class="menu-card" data-mode="accelerate">
+      <div class="icon">⚡</div>
+      <h2>С ускорением</h2>
+      <p>Стены телепортируют, с каждым куском змейка быстрее.</p>
+    </div>
+    <div class="menu-card" data-mode="immortal">
+      <div class="icon">♾️</div>
+      <h2>Бессмертная</h2>
+      <p>При столкновении счёт сбрасывается, змея начинает заново.</p>
+    </div>
+    <div class="menu-card" data-mode="meme" id="meme-card" style="display:none;">
+      <div class="icon">😎</div>
+      <h2>Мемный режим</h2>
+      <p>Пицца вместо яблок, змея в очках, фон мигает.</p>
+    </div>
+  </div>
+</div>
+
+<div id="game-screen">
+  <h2 id="game-title"></h2>
+  <p class="subtitle" id="game-desc"></p>
+  <div class="hud">
+    <div class="score-box">Счёт: <span id="score">0</span></div>
+    <div>
+      <button class="back-btn" onclick="backToMenu()">← Меню</button>
+      <button class="restart-btn" onclick="restartCurrent()">Заново</button>
+    </div>
+  </div>
+  <div class="game-wrap" id="game-wrap">
+    <canvas id="canvas" width="460" height="460"></canvas>
+    <div class="overlay" id="overlay">
+      <h3 id="overlay-title">Нажми любую стрелку</h3>
+      <p id="overlay-text"></p>
+      <p class="start-hint">WASD, стрелки или свайп</p>
+    </div>
+  </div>
+  <div class="touch-controls" id="touch-controls">
+    <div class="touch-btn up" data-dir="up">▲</div>
+    <div class="touch-btn down" data-dir="down">▼</div>
+    <div class="touch-btn left" data-dir="left">◀</div>
+    <div class="touch-btn right" data-dir="right">▶</div>
+  </div>
+</div>
+
+<div class="footer-warning">
+  ⚠️ <strong>Проект защищён двумя 9-классниками!</strong><br>
+  <span>Если украдёшь код — они найдут тебя даже в Minecraft. Шучу (но не совсем).</span>
+</div>
+
+<div id="settings-panel">
+  <div class="settings-box">
+    <h2>⚙️ Настройки</h2>
+    <div class="settings-group">
+      <label>Тема оформления</label>
+      <div class="settings-options">
+        <div class="settings-opt active" data-setting="theme" data-value="normal">🎨 Обычная</div>
+        <div class="settings-opt" data-setting="theme" data-value="bw">🖤 Чёрно-белая</div>
+        <div class="settings-opt" data-setting="theme" data-value="invert">🔄 Инверсия</div>
+      </div>
+    </div>
+    <div class="settings-group">
+      <label>Управление на телефоне</label>
+      <div class="settings-options">
+        <div class="settings-opt active" data-setting="control" data-value="buttons">🔘 Кнопки</div>
+        <div class="settings-opt" data-setting="control" data-value="swipe">👆 Свайпы</div>
+      </div>
+    </div>
+    <div class="settings-group">
+      <label>Размер поля</label>
+      <div class="settings-options">
+        <div class="settings-opt" data-setting="grid" data-value="5">5×5</div>
+        <div class="settings-opt" data-setting="grid" data-value="7">7×7</div>
+        <div class="settings-opt active" data-setting="grid" data-value="10">10×10</div>
+        <div class="settings-opt" data-setting="grid" data-value="15">15×15</div>
+        <div class="settings-opt" data-setting="grid" data-value="23">23×23</div>
+      </div>
+    </div>
+    <button class="settings-close" onclick="toggleSettings()">Закрыть</button>
+  </div>
+</div>
+
+<script>
+var canvas = document.getElementById('canvas');
+var ctx = canvas.getContext('2d');
+
+// Размеры поля пересчитываются при старте игры
+var CANVAS_SIZE = 460;
+var TILE = 46;
+var GRID_W = 10;
+var GRID_H = 10;
+
+var snake, food, dx, dy, score, gameRunning, speed, timeoutId;
+var currentMode = null;
+var pendingDx = 0, pendingDy = 0;
+
+// ===== НАСТРОЙКИ =====
+var settings = {
+  theme: 'normal',
+  control: 'buttons',
+  grid: 10
+};
+
+var BASE_SPEED = 145; // было 120 — на ~20% медленнее
+
+function toggleSettings() {
+  document.getElementById('settings-panel').classList.toggle('show');
+}
+
+document.querySelectorAll('.settings-opt').forEach(function(opt) {
+  opt.addEventListener('click', function() {
+    var setting = opt.dataset.setting;
+    var value = opt.dataset.value;
+    settings[setting] = setting === 'grid' ? parseInt(value) : value;
+    document.querySelectorAll('.settings-opt[data-setting="' + setting + '"]').forEach(function(o) {
+      o.classList.remove('active');
+    });
+    opt.classList.add('active');
+    applyControlSetting();
+    if (currentMode) {
+      initGame();
+      showOverlay('Нажми любую стрелку', '', true);
+    }
+  });
+});
+
+function applyControlSetting() {
+  var touchControls = document.getElementById('touch-controls');
+  var isMobile = window.innerWidth <= 768;
+  if (isMobile && settings.control === 'buttons') {
+    touchControls.style.display = 'block';
+  } else {
+    touchControls.style.display = 'none';
+  }
+}
+
+window.addEventListener('resize', applyControlSetting);
+
+// ===== РАЗМЕР ПОЛЯ =====
+function setupGrid() {
+  var gridSize = settings.grid;
+  TILE = Math.floor(CANVAS_SIZE / gridSize);
+  GRID_W = gridSize;
+  GRID_H = gridSize;
+  canvas.width = TILE * GRID_W;
+  canvas.height = TILE * GRID_H;
+}
+
+// ===== СЛУЧАЙНЫЙ СТАРТ =====
+function randomStart() {
+  // Змея из 3 сегментов в случайном месте
+  // Оставляем отступ от стен минимум 1 клетка
+  var margin = 1;
+  var startX = margin + Math.floor(Math.random() * (GRID_W - margin * 2));
+  var startY = margin + Math.floor(Math.random() * (GRID_H - margin * 2));
+
+  // Случайное направление (горизонтальное или вертикальное)
+  var horizontal = Math.random() < 0.5;
+  var dir = Math.random() < 0.5 ? 1 : -1;
+
+  var s = [];
+  for (var i = 0; i < 3; i++) {
+    if (horizontal) {
+      var x = startX - dir * i;
+      if (x < 0) x = GRID_W - 1;
+      if (x >= GRID_W) x = 0;
+      s.push({ x: x, y: startY });
+    } else {
+      var y = startY - dir * i;
+      if (y < 0) y = GRID_H - 1;
+      if (y >= GRID_H) y = 0;
+      s.push({ x: startX, y: y });
+    }
+  }
+  return s;
+}
+
+// ===== ЦВЕТА ДЛЯ ТЕМ =====
+function getThemeColors() {
+  if (settings.theme === 'bw') {
+    return {
+      bg: '#000000', grid: 'rgba(255,255,255,0.05)',
+      snakeHead: '#ffffff', snakeTail: '#555555', snakeHeadGlow: '#ffffff',
+      foodColor: '#ffffff', foodGlow: '#ffffff', leafColor: '#888888',
+      memeSnake: '#ffffff', memeBg1: '#111111', memeBg2: '#000000',
+      memeFood: '#ffffff', memeFoodGlow: '#ffffff', memeFoodStroke: '#555555', memeFoodDot: '#333333'
+    };
+  } else if (settings.theme === 'invert') {
+    return {
+      bg: '#f0f0f0', grid: 'rgba(0,0,0,0.08)',
+      snakeHead: '#0575e6', snakeTail: '#00f260', snakeHeadGlow: '#0575e6',
+      foodColor: '#00f260', foodGlow: '#00f260', leafColor: '#e67e22',
+      memeSnake: '#8e44ad', memeBg1: '#ffe0f0', memeBg2: '#e0f0ff',
+      memeFood: '#8e44ad', memeFoodGlow: '#8e44ad', memeFoodStroke: '#9b59b6', memeFoodDot: '#3498db'
+    };
+  }
+  return {
+    bg: '#0a0a12', grid: 'rgba(255,255,255,0.03)',
+    snakeHead: '#00f260', snakeTail: '#0575e6', snakeHeadGlow: '#00f260',
+    foodColor: 'apple', foodGlow: '#ff3838', leafColor: '#2ecc71',
+    memeSnake: 'rainbow', memeBg1: '#1a0a2e', memeBg2: '#0a0a12',
+    memeFood: '#ff9500', memeFoodGlow: '#ff9500', memeFoodStroke: '#cc6600', memeFoodDot: '#cc0000'
+  };
+}
+
+var memePhrases = [
+  "Опять не хватило 1 кусочка 😔",
+  "Змея сказала: «Я так не играю» 🐍",
+  "Даже кот бы сыграл лучше. Прости, кот 🐱",
+  "Стена победила. Стена всегда побеждает 🧱",
+  "Это не твоя вина. Это баг в матрице 💊",
+  "Попробуй ещё раз. Змея верит в тебя!",
+  "Красиво умер. Счёт обидно 😎"
+];
+
+var modeInfo = {
+  classic:    { title: '🎯 Классическая змейка', desc: 'Стены и хвост убивают. Набери максимум!' },
+  accelerate: { title: '⚡ Змейка с ускорением', desc: 'Стены телепортируют, скорость растёт!' },
+  immortal:   { title: '♾️ Бессмертная змейка', desc: 'При столкновении — сброс очков и заново.' },
+  meme:       { title: '😎 Мемный режим', desc: 'Пицца, очки, мигающий фон. Попробуй!' }
+};
+
+// ===== ТРОЙНОЙ КЛИК =====
+var cardData = {};
+
+document.querySelectorAll('.menu-card').forEach(function(card) {
+  var mode = card.dataset.mode;
+  card.addEventListener('click', function() {
+    if (mode === 'meme') { openGame('meme'); return; }
+    if (!cardData[mode]) cardData[mode] = { count: 0, timer: null };
+    var data = cardData[mode];
+    data.count++;
+    card.classList.add('bump');
+    setTimeout(function() { card.classList.remove('bump'); }, 200);
+    clearTimeout(data.timer);
+    data.timer = setTimeout(function() {
+      if (data.count >= 3) {
+        document.getElementById('meme-card').style.display = 'block';
+      } else {
+        openGame(mode);
+      }
+      data.count = 0;
+    }, 350);
+  });
+});
+
+function openGame(mode) {
+  currentMode = mode;
+  document.getElementById('menu').style.display = 'none';
+  document.getElementById('game-screen').style.display = 'flex';
+  document.getElementById('game-title').textContent = modeInfo[mode].title;
+  document.getElementById('game-desc').textContent = modeInfo[mode].desc;
+  applyControlSetting();
+  initGame();
+  showOverlay('Нажми любую стрелку', '', true);
+}
+
+function backToMenu() {
+  stopGame();
+  document.getElementById('game-screen').style.display = 'none';
+  document.getElementById('menu').style.display = 'block';
+}
+
+function restartCurrent() {
+  initGame();
+  showOverlay('Нажми любую стрелку', '', true);
+}
+
+function initGame() {
+  stopGame();
+  setupGrid();
+  snake = randomStart();
+  dx = 0; dy = 0; pendingDx = 0; pendingDy = 0;
+  score = 0;
+  speed = BASE_SPEED;
+  gameRunning = false;
+  placeFood();
+  updateScore();
+  draw();
+}
+
+function stopGame() {
+  if (timeoutId) { clearTimeout(timeoutId); timeoutId = null; }
+  gameRunning = false;
+}
+
+function placeFood() {
+  var tries = 0;
+  do {
+    food = { x: Math.floor(Math.random() * GRID_W), y: Math.floor(Math.random() * GRID_H) };
+    tries++;
+  } while (snake.some(function(s) { return s.x === food.x && s.y === food.y; }) && tries < 200);
+}
+
+function updateScore() {
+  document.getElementById('score').textContent = score;
+}
+
+function showOverlay(title, text, green) {
+  var ov = document.getElementById('overlay');
+  ov.classList.remove('hidden');
+  var t = document.getElementById('overlay-title');
+  t.textContent = title;
+  t.style.color = green ? '#00f260' : '#ff4757';
+  document.getElementById('overlay-text').textContent = text;
+}
+
+function hideOverlay() {
+  document.getElementById('overlay').classList.add('hidden');
+}
+
+// ===== ОТРИСОВКА =====
+function draw() {
+  var tc = getThemeColors();
+
+  if (currentMode === 'meme') {
+    var flash = Math.floor(Date.now() / 200) % 2 === 0;
+    ctx.fillStyle = flash ? tc.memeBg1 : tc.memeBg2;
+  } else {
+    ctx.fillStyle = tc.bg;
+  }
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.strokeStyle = tc.grid;
+  ctx.lineWidth = 1;
+  for (var i = 0; i <= GRID_W; i++) {
+    ctx.beginPath(); ctx.moveTo(i * TILE, 0); ctx.lineTo(i * TILE, canvas.height); ctx.stroke();
+  }
+  for (var j = 0; j <= GRID_H; j++) {
+    ctx.beginPath(); ctx.moveTo(0, j * TILE); ctx.lineTo(canvas.width, j * TILE); ctx.stroke();
+  }
+
+  drawFood(tc);
+  drawSnake(tc);
+}
+
+function drawFood(tc) {
+  var cx = food.x * TILE + TILE / 2;
+  var cy = food.y * TILE + TILE / 2;
+  var r = TILE / 2 - 3;
+  if (r < 4) r = 4;
+
+  if (currentMode === 'meme') {
+    ctx.shadowColor = tc.memeFoodGlow;
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = tc.memeFood;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = tc.memeFoodStroke;
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = tc.memeFoodDot;
+    ctx.beginPath(); ctx.arc(cx - 3, cy - 2, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + 3, cy + 2, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + 1, cy - 4, 1.5, 0, Math.PI * 2); ctx.fill();
+  } else if (tc.foodColor === 'apple') {
+    var pulse = Math.sin(Date.now() / 250) * 0.3 + 0.7;
+    ctx.shadowColor = tc.foodGlow;
+    ctx.shadowBlur = 18 * pulse;
+    var grad = ctx.createRadialGradient(cx - 2, cy - 2, 1, cx, cy, r);
+    grad.addColorStop(0, '#ff6b6b');
+    grad.addColorStop(1, '#c0392b');
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = tc.leafColor;
+    ctx.beginPath(); ctx.ellipse(cx + 3, cy - r + 1, 4, 2.5, -0.4, 0, Math.PI * 2); ctx.fill();
+  } else {
+    var pulse2 = Math.sin(Date.now() / 250) * 0.3 + 0.7;
+    ctx.shadowColor = tc.foodGlow;
+    ctx.shadowBlur = 18 * pulse2;
+    ctx.fillStyle = tc.foodColor;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = tc.leafColor;
+    ctx.beginPath(); ctx.ellipse(cx + 3, cy - r + 1, 4, 2.5, -0.4, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+function drawSnake(tc) {
+  ctx.shadowBlur = 0;
+  for (var i = snake.length - 1; i >= 0; i--) {
+    var seg = snake[i];
+    var x = seg.x * TILE;
+    var y = seg.y * TILE;
+    var t = i / Math.max(snake.length - 1, 1);
+
+    var color;
+    if (currentMode === 'meme' && tc.memeSnake === 'rainbow') {
+      var hue = (i * 25 + Date.now() / 20) % 360;
+      color = 'hsl(' + hue + ',70%,55%)';
+    } else if (currentMode === 'meme') {
+      color = tc.memeSnake;
+    } else {
+      var headRGB = hexToRgb(tc.snakeHead);
+      var tailRGB = hexToRgb(tc.snakeTail);
+      var rr = Math.round(headRGB.r + (tailRGB.r - headRGB.r) * t);
+      var gg = Math.round(headRGB.g + (tailRGB.g - headRGB.g) * t);
+      var bb = Math.round(headRGB.b + (tailRGB.b - headRGB.b) * t);
+      color = 'rgb(' + rr + ',' + gg + ',' + bb + ')';
+    }
+
+    if (i === 0) {
+      ctx.shadowColor = (currentMode === 'meme') ? '#ffd700' : tc.snakeHeadGlow;
+      ctx.shadowBlur = 15;
+    }
+
+    var pad = 2, size = TILE - pad * 2;
+    var radius = Math.min(6, size / 3);
+    ctx.fillStyle = color;
+    roundRect(ctx, x + pad, y + pad, size, size, radius);
+    ctx.fill();
+
+    if (i === 0) {
+      ctx.shadowBlur = 0;
+      drawEyes(x, y);
+    }
+  }
+}
+
+function hexToRgb(hex) {
+  var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : { r: 255, g: 255, b: 255 };
+}
+
+function drawEyes(x, y) {
+  var cx = x + TILE / 2;
+  var cy = y + TILE / 2;
+  var eyeOffset = Math.max(3, TILE / 6);
+  var eyeR = Math.max(2, TILE / 8);
+  var pupilR = Math.max(1, TILE / 16);
+  var ex1, ey1, ex2, ey2;
+
+  if (dx === 1)       { ex1 = cx + 3; ey1 = cy - eyeOffset; ex2 = cx + 3; ey2 = cy + eyeOffset; }
+  else if (dx === -1) { ex1 = cx - 3; ey1 = cy - eyeOffset; ex2 = cx - 3; ey2 = cy + eyeOffset; }
+  else if (dy === -1) { ex1 = cx - eyeOffset; ey1 = cy - 3; ex2 = cx + eyeOffset; ey2 = cy - 3; }
+  else                { ex1 = cx - eyeOffset; ey1 = cy + 3; ex2 = cx + eyeOffset; ey2 = cy + 3; }
+
+  if (currentMode === 'meme') {
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(cx - 5, cy - 1, 5, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx + 5, cy - 1, 5, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.arc(cx - 5, cy - 1, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + 5, cy - 1, 4, 0, Math.PI * 2); ctx.fill();
+  }
+
+  var eyeWhite = (settings.theme === 'invert') ? '#000' : '#fff';
+  var pupilColor = (settings.theme === 'invert') ? '#fff' : '#000';
+
+  ctx.fillStyle = eyeWhite;
+  ctx.beginPath(); ctx.arc(ex1, ey1, eyeR, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(ex2, ey2, eyeR, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = pupilColor;
+  ctx.beginPath(); ctx.arc(ex1, ey1, pupilR, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(ex2, ey2, pupilR, 0, Math.PI * 2); ctx.fill();
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+// ===== ИГРОВАЯ ЛОГИКА =====
+function update() {
+  dx = pendingDx;
+  dy = pendingDy;
+  var head = { x: snake[0].x + dx, y: snake[0].y + dy };
+
+  if (currentMode === 'classic' || currentMode === 'meme') {
+    if (head.x < 0 || head.x >= GRID_W || head.y < 0 || head.y >= GRID_H ||
+        snake.some(function(s) { return s.x === head.x && s.y === head.y; })) {
+      gameOver(); return;
+    }
+  } else if (currentMode === 'accelerate') {
+    if (head.x < 0) head.x = GRID_W - 1;
+    if (head.x >= GRID_W) head.x = 0;
+    if (head.y < 0) head.y = GRID_H - 1;
+    if (head.y >= GRID_H) head.y = 0;
+    if (snake.some(function(s) { return s.x === head.x && s.y === head.y; })) {
+      gameOver(); return;
+    }
+    // ускорение тоже начинается от базовой скорости
+    speed = Math.max(60, BASE_SPEED - Math.floor(score / 3) * 8);
+  } else if (currentMode === 'immortal') {
+    if (head.x < 0 || head.x >= GRID_W || head.y < 0 || head.y >= GRID_H ||
+        snake.some(function(s) { return s.x === head.x && s.y === head.y; })) {
+      score = 0; updateScore();
+      snake = randomStart();
+      dx = 0; dy = 0; pendingDx = 0; pendingDy = 0;
+      placeFood(); draw(); gameRunning = false;
+      showOverlay('Ой! Сброс очков', 'Нажми стрелку, чтобы продолжить', true);
+      return;
+    }
+  }
+
+  snake.unshift(head);
+
+  if (head.x === food.x && head.y === food.y) {
+    score++; updateScore(); placeFood();
+  } else {
+    snake.pop();
+  }
+}
+
+function gameOver() {
+  stopGame();
+  var phrase = memePhrases[Math.floor(Math.random() * memePhrases.length)];
+  showOverlay('Игра окончена', phrase + ' | Счёт: ' + score);
+}
+
+function loop() {
+  update();
+  if (gameRunning) {
+    draw();
+    timeoutId = setTimeout(loop, speed);
+  }
+}
+
+function startLoop() {
+  if (gameRunning) return;
+  gameRunning = true;
+  hideOverlay();
+  loop();
+}
+
+// ===== УПРАВЛЕНИЕ =====
+function handleDirection(ndx, ndy) {
+  if (!currentMode || document.getElementById('game-screen').style.display === 'none') return;
+  if (!(ndx === -dx && ndy === -dy) || (dx === 0 && dy === 0)) {
+    pendingDx = ndx;
+    pendingDy = ndy;
+    if (!gameRunning) startLoop();
+  }
+}
+
+document.addEventListener('keydown', function(e) {
+  var ndx = 0, ndy = 0;
+  switch (e.key) {
+    case 'ArrowUp':    case 'w': case 'W': ndy = -1; break;
+    case 'ArrowDown':  case 's': case 'S': ndy =  1; break;
+    case 'ArrowLeft':  case 'a': case 'A': ndx = -1; break;
+    case 'ArrowRight': case 'd': case 'D': ndx =  1; break;
+    default: return;
+  }
+  e.preventDefault();
+  handleDirection(ndx, ndy);
+});
+
+document.querySelectorAll('.touch-btn').forEach(function(btn) {
+  var dir = btn.dataset.dir;
+  var handler = function(e) {
+    e.preventDefault();
+    if (dir === 'up')         handleDirection(0, -1);
+    else if (dir === 'down')  handleDirection(0, 1);
+    else if (dir === 'left')  handleDirection(-1, 0);
+    else if (dir === 'right') handleDirection(1, 0);
+  };
+  btn.addEventListener('touchstart', handler, { passive: false });
+  btn.addEventListener('click', handler);
+});
+
+var touchStartX = 0, touchStartY = 0;
+var gameWrap = document.getElementById('game-wrap');
+
+gameWrap.addEventListener('touchstart', function(e) {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+gameWrap.addEventListener('touchend', function(e) {
+  var dxt = e.changedTouches[0].clientX - touchStartX;
+  var dyt = e.changedTouches[0].clientY - touchStartY;
+  if (Math.abs(dxt) < 20 && Math.abs(dyt) < 20) return;
+  if (Math.abs(dxt) > Math.abs(dyt)) {
+    handleDirection(dxt > 0 ? 1 : -1, 0);
+  } else {
+    handleDirection(0, dyt > 0 ? 1 : -1);
+  }
+}, { passive: true });
+
+applyControlSetting();
+</script>
+</body>
+</html>
