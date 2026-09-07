@@ -9,10 +9,10 @@
 body { font-family: 'Segoe UI', Arial, sans-serif; background: linear-gradient(135deg,#0f0c29,#302b63,#24243e); color:#fff; min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow-x:hidden; }
 #menu { text-align:center; max-width:900px; width:100%; padding:40px 20px; animation:fadeIn .5s ease; z-index:10; position:relative; }
 #menu h1 { font-size:3rem; margin-bottom:8px; background:linear-gradient(135deg,#00f260,#0575e6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; text-shadow:0 0 30px rgba(0,242,96,.3); }
-#menu .subtitle { font-size:1.1rem; color:#888; margin-bottom:50px; }
+#menu .subtitle { font-size:1.1rem; color:#888; margin-bottom:30px; }
 .menu-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; }
 @media (max-width:700px){ .menu-grid{ grid-template-columns:1fr; } }
-.menu-card { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); border-radius:18px; padding:30px 24px; cursor:pointer; transition:all .3s ease; text-align:center; user-select:none; }
+.menu-card { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); border-radius:18px; padding:30px 24px; cursor:pointer; transition:all .3s ease; text-align:center; user-select:none; -webkit-user-select:none; }
 .menu-card:hover { background:rgba(255,255,255,.12); transform:translateY(-6px); box-shadow:0 12px 40px rgba(0,0,0,.4); border-color:rgba(0,242,96,.4); }
 .menu-card.bump { transform:scale(1.08); background:rgba(255,215,0,.15); border-color:#ffd700; }
 .menu-card .icon { font-size:3rem; margin-bottom:14px; }
@@ -21,7 +21,7 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: linear-gradient(1
 #game-screen { display:none; flex-direction:column; align-items:center; width:100%; max-width:500px; padding:30px 20px; animation:fadeIn .4s ease; }
 #game-screen h2 { font-size:1.6rem; margin-bottom:4px; background:linear-gradient(135deg,#00f260,#0575e6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
 #game-screen .subtitle { font-size:.9rem; color:#888; margin-bottom:18px; }
-.game-wrap { position:relative; border-radius:14px; overflow:hidden; box-shadow:0 0 40px rgba(0,242,96,.15),0 8px 32px rgba(0,0,0,.5); }
+.game-wrap { position:relative; border-radius:14px; overflow:hidden; box-shadow:0 0 40px rgba(0,242,96,.15),0 8px 32px rgba(0,0,0,.5); touch-action:none; }
 canvas { display:block; background:#0a0a12; border-radius:14px; }
 .hud { display:flex; justify-content:space-between; align-items:center; width:100%; max-width:460px; margin-bottom:12px; }
 .score-box { font-size:1.2rem; font-weight:700; color:#00f260; }
@@ -35,22 +35,40 @@ canvas { display:block; background:#0a0a12; border-radius:14px; }
 .overlay p { font-size:1.2rem; color:#fff; text-align:center; }
 .overlay .start-hint { font-size:1rem; color:#00f260; }
 .touch-controls { display:none; margin-top:20px; width:200px; height:200px; position:relative; }
-.touch-btn { position:absolute; width:64px; height:64px; border-radius:50%; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); color:#fff; font-size:1.5rem; display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none; }
+.touch-btn { position:absolute; width:64px; height:64px; border-radius:50%; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); color:#fff; font-size:1.5rem; display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none; -webkit-user-select:none; }
 .touch-btn:active { background:rgba(0,242,96,.3); }
 .touch-btn.up { top:0; left:50%; transform:translateX(-50%); }
 .touch-btn.down { bottom:0; left:50%; transform:translateX(-50%); }
 .touch-btn.left { top:50%; left:0; transform:translateY(-50%); }
 .touch-btn.right { top:50%; right:0; transform:translateY(-50%); }
-@media (max-width:768px){ .touch-controls{ display:block; } }
 .footer-warning { margin-top:40px; padding:20px; background:rgba(0,0,0,.3); border-top:1px dashed #444; border-bottom:1px dashed #444; text-align:center; font-size:.85rem; line-height:1.4; color:#ff5252; max-width:500px; width:100%; }
 .footer-warning strong { color:#fff; }
 .footer-warning span { color:#ccc; font-style:italic; }
 @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+/* КНОПКА НАСТРОЕК */
+.settings-btn { position:absolute; top:20px; right:20px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.2); color:#fff; width:44px; height:44px; border-radius:50%; cursor:pointer; font-size:1.4rem; display:flex; align-items:center; justify-content:center; transition:all .2s; z-index:20; }
+.settings-btn:hover { background:rgba(255,255,255,.18); transform:rotate(60deg); }
+
+/* ОКНО НАСТРОЕК */
+#settings-panel { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:100; align-items:center; justify-content:center; }
+#settings-panel.show { display:flex; }
+.settings-box { background:#1a1a2e; border:1px solid rgba(255,255,255,.15); border-radius:18px; padding:30px; max-width:400px; width:90%; animation:fadeIn .3s ease; }
+.settings-box h2 { font-size:1.5rem; margin-bottom:24px; text-align:center; color:#00f260; }
+.settings-group { margin-bottom:28px; }
+.settings-group label { display:block; font-size:.95rem; color:#aaa; margin-bottom:12px; }
+.settings-options { display:flex; gap:10px; flex-wrap:wrap; }
+.settings-opt { background:rgba(255,255,255,.05); border:2px solid rgba(255,255,255,.1); color:#fff; padding:10px 18px; border-radius:10px; cursor:pointer; font-size:.9rem; transition:all .2s; user-select:none; }
+.settings-opt:hover { background:rgba(255,255,255,.12); }
+.settings-opt.active { border-color:#00f260; background:rgba(0,242,96,.15); color:#00f260; }
+.settings-close { width:100%; background:linear-gradient(135deg,#00f260,#0575e6); color:#000; border:none; padding:12px; border-radius:10px; cursor:pointer; font-weight:700; font-size:1rem; margin-top:10px; }
+.settings-close:hover { transform:scale(1.02); }
 </style>
 </head>
 <body>
 
 <div id="menu">
+  <button class="settings-btn" onclick="toggleSettings()">⚙️</button>
   <h1>🐍 Змейка</h1>
   <p class="subtitle">Выбери режим и играй!</p>
   <div class="menu-grid">
@@ -87,7 +105,7 @@ canvas { display:block; background:#0a0a12; border-radius:14px; }
       <button class="restart-btn" onclick="restartCurrent()">Заново</button>
     </div>
   </div>
-  <div class="game-wrap">
+  <div class="game-wrap" id="game-wrap">
     <canvas id="canvas" width="460" height="460"></canvas>
     <div class="overlay" id="overlay">
       <h3 id="overlay-title">Нажми любую стрелку</h3>
@@ -95,7 +113,7 @@ canvas { display:block; background:#0a0a12; border-radius:14px; }
       <p class="start-hint">WASD, стрелки или кнопки внизу</p>
     </div>
   </div>
-  <div class="touch-controls">
+  <div class="touch-controls" id="touch-controls">
     <div class="touch-btn up" data-dir="up">▲</div>
     <div class="touch-btn down" data-dir="down">▼</div>
     <div class="touch-btn left" data-dir="left">◀</div>
@@ -108,18 +126,102 @@ canvas { display:block; background:#0a0a12; border-radius:14px; }
   <span>Если украдёшь код — они найдут тебя даже в Minecraft. Шучу (но не совсем).</span>
 </div>
 
+<!-- ОКНО НАСТРОЕК -->
+<div id="settings-panel">
+  <div class="settings-box">
+    <h2>⚙️ Настройки</h2>
+    <div class="settings-group">
+      <label>Тема оформления</label>
+      <div class="settings-options">
+        <div class="settings-opt active" data-setting="theme" data-value="normal">🎨 Обычная</div>
+        <div class="settings-opt" data-setting="theme" data-value="bw">🖤 Чёрно-белая</div>
+        <div class="settings-opt" data-setting="theme" data-value="invert">🔄 Инверсия</div>
+      </div>
+    </div>
+    <div class="settings-group">
+      <label>Управление на телефоне</label>
+      <div class="settings-options">
+        <div class="settings-opt active" data-setting="control" data-value="buttons">🔘 Кнопки</div>
+        <div class="settings-opt" data-setting="control" data-value="swipe">👆 Свайпы</div>
+      </div>
+    </div>
+    <button class="settings-close" onclick="toggleSettings()">Закрыть</button>
+  </div>
+</div>
+
 <script>
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-const TILE = 20;
-const GRID_W = canvas.width / TILE;
-const GRID_H = canvas.height / TILE;
+var canvas = document.getElementById('canvas');
+var ctx = canvas.getContext('2d');
+var TILE = 20;
+var GRID_W = canvas.width / TILE;
+var GRID_H = canvas.height / TILE;
 
-let snake, food, dx, dy, score, gameRunning, speed, timeoutId;
-let currentMode = null;
-let pendingDx = 0, pendingDy = 0;
+var snake, food, dx, dy, score, gameRunning, speed, timeoutId;
+var currentMode = null;
+var pendingDx = 0, pendingDy = 0;
 
-const memePhrases = [
+// ===== НАСТРОЙКИ =====
+var settings = { theme: 'normal', control: 'buttons' };
+
+function toggleSettings() {
+  document.getElementById('settings-panel').classList.toggle('show');
+}
+
+document.querySelectorAll('.settings-opt').forEach(function(opt) {
+  opt.addEventListener('click', function() {
+    var setting = opt.dataset.setting;
+    var value = opt.dataset.value;
+    settings[setting] = value;
+    document.querySelectorAll('.settings-opt[data-setting="' + setting + '"]').forEach(function(o) {
+      o.classList.remove('active');
+    });
+    opt.classList.add('active');
+    applyControlSetting();
+    if (currentMode) draw();
+  });
+});
+
+function applyControlSetting() {
+  var touchControls = document.getElementById('touch-controls');
+  var isMobile = window.innerWidth <= 768;
+  if (isMobile && settings.control === 'buttons') {
+    touchControls.style.display = 'block';
+  } else {
+    touchControls.style.display = 'none';
+  }
+}
+
+window.addEventListener('resize', applyControlSetting);
+
+// ===== ЦВЕТА ДЛЯ ТЕМ =====
+function getThemeColors() {
+  if (settings.theme === 'bw') {
+    return {
+      bg: '#000000', grid: 'rgba(255,255,255,0.05)',
+      snakeHead: '#ffffff', snakeTail: '#555555', snakeHeadGlow: '#ffffff',
+      foodColor: '#ffffff', foodGlow: '#ffffff', leafColor: '#888888',
+      memeSnake: '#ffffff', memeBg1: '#111111', memeBg2: '#000000',
+      memeFood: '#ffffff', memeFoodGlow: '#ffffff', memeFoodStroke: '#555555', memeFoodDot: '#333333'
+    };
+  } else if (settings.theme === 'invert') {
+    return {
+      bg: '#f0f0f0', grid: 'rgba(0,0,0,0.08)',
+      snakeHead: '#0575e6', snakeTail: '#00f260', snakeHeadGlow: '#0575e6',
+      foodColor: '#00f260', foodGlow: '#00f260', leafColor: '#e67e22',
+      memeSnake: '#8e44ad', memeBg1: '#ffe0f0', memeBg2: '#e0f0ff',
+      memeFood: '#8e44ad', memeFoodGlow: '#8e44ad', memeFoodStroke: '#9b59b6', memeFoodDot: '#3498db'
+    };
+  }
+  return {
+    bg: '#0a0a12', grid: 'rgba(255,255,255,0.03)',
+    snakeHead: '#00f260', snakeTail: '#0575e6', snakeHeadGlow: '#00f260',
+    foodColor: 'apple', foodGlow: '#ff3838', leafColor: '#2ecc71',
+    memeSnake: 'rainbow', memeBg1: '#1a0a2e', memeBg2: '#0a0a12',
+    memeFood: '#ff9500', memeFoodGlow: '#ff9500', memeFoodStroke: '#cc6600', memeFoodDot: '#cc0000'
+  };
+}
+
+var memePhrases = [
   "Опять не хватило 1 кусочка 😔",
   "Змея сказала: «Я так не играю» 🐍",
   "Даже кот бы сыграл лучше. Прости, кот 🐱",
@@ -129,60 +231,38 @@ const memePhrases = [
   "Красиво умер. Счёт обидно 😎"
 ];
 
-const modeInfo = {
-  classic: { title: '🎯 Классическая змейка', desc: 'Стены и хвост убивают. Набери максимум!' },
+var modeInfo = {
+  classic:    { title: '🎯 Классическая змейка', desc: 'Стены и хвост убивают. Набери максимум!' },
   accelerate: { title: '⚡ Змейка с ускорением', desc: 'Стены телепортируют, скорость растёт!' },
-  immortal: { title: '♾️ Бессмертная змейка', desc: 'При столкновении — сброс очков и заново.' },
-  meme: { title: '😎 Мемный режим', desc: 'Пицца, очки, мигающий фон. Попробуй!' }
+  immortal:   { title: '♾️ Бессмертная змейка', desc: 'При столкновении — сброс очков и заново.' },
+  meme:       { title: '😎 Мемный режим', desc: 'Пицца, очки, мигающий фон. Попробуй!' }
 };
 
-// Тройной клик по карточке -> открыть мем-режим
-const cardClicks = {};
-const cardTimers = {};
+// ===== ТРОЙНОЙ КЛИК =====
+var cardData = {};
 
-document.querySelectorAll('.menu-card').forEach(card => {
-  const mode = card.dataset.mode;
+document.querySelectorAll('.menu-card').forEach(function(card) {
+  var mode = card.dataset.mode;
 
-  card.addEventListener('click', () => {
-    if (mode === 'meme') {
-      openGame('meme');
-      return;
-    }
+  card.addEventListener('click', function() {
+    if (mode === 'meme') { openGame('meme'); return; }
 
-    // Считаем быстрые клики
-    const now = Date.now();
-    if (cardTimers[mode] && (now - cardTimers[mode]) < 500) {
-      cardClicks[mode] = (cardClicks[mode] || 1) + 1;
-    } else {
-      cardClicks[mode] = 1;
-    }
-    cardTimers[mode] = now;
+    if (!cardData[mode]) cardData[mode] = { count: 0, timer: null };
+    var data = cardData[mode];
+    data.count++;
 
-    // Визуальный эффект
     card.classList.add('bump');
-    setTimeout(() => card.classList.remove('bump'), 200);
+    setTimeout(function() { card.classList.remove('bump'); }, 200);
 
-    if (cardClicks[mode] >= 3) {
-      cardClicks[mode] = 0;
-      const memeCard = document.getElementById('meme-card');
-      memeCard.style.display = 'block';
-      memeCard.style.animation = 'fadeIn .5s ease';
-      // Небольшая задержка чтобы карточка появилась
-      setTimeout(() => {
-        // Можно сразу открыть или пусть юзер сам кликнет
-      }, 100);
-      return;
-    }
-
-    // Обычный клик — открываем игру через короткую задержку
-    // (чтобы если это первый клик из серии тройного — не открылось сразу)
-    setTimeout(() => {
-      // Если за это время не набралось 3 клика — открываем игру
-      if (cardClicks[mode] < 3) {
+    clearTimeout(data.timer);
+    data.timer = setTimeout(function() {
+      if (data.count >= 3) {
+        document.getElementById('meme-card').style.display = 'block';
+      } else {
         openGame(mode);
-        cardClicks[mode] = 0;
       }
-    }, 250);
+      data.count = 0;
+    }, 350);
   });
 });
 
@@ -192,6 +272,7 @@ function openGame(mode) {
   document.getElementById('game-screen').style.display = 'flex';
   document.getElementById('game-title').textContent = modeInfo[mode].title;
   document.getElementById('game-desc').textContent = modeInfo[mode].desc;
+  applyControlSetting();
   initGame();
   showOverlay('Нажми любую стрелку', '', true);
 }
@@ -211,12 +292,8 @@ function initGame() {
   stopGame();
   snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
   dx = 0; dy = 0; pendingDx = 0; pendingDy = 0;
-  score = 0;
-  speed = 120;
-  gameRunning = false;
-  placeFood();
-  updateScore();
-  draw();
+  score = 0; speed = 120; gameRunning = false;
+  placeFood(); updateScore(); draw();
 }
 
 function stopGame() {
@@ -225,9 +302,11 @@ function stopGame() {
 }
 
 function placeFood() {
+  var tries = 0;
   do {
     food = { x: Math.floor(Math.random() * GRID_W), y: Math.floor(Math.random() * GRID_H) };
-  } while (snake.some(s => s.x === food.x && s.y === food.y));
+    tries++;
+  } while (snake.some(function(s) { return s.x === food.x && s.y === food.y; }) && tries < 100);
 }
 
 function updateScore() {
@@ -235,9 +314,9 @@ function updateScore() {
 }
 
 function showOverlay(title, text, green) {
-  const ov = document.getElementById('overlay');
+  var ov = document.getElementById('overlay');
   ov.classList.remove('hidden');
-  const t = document.getElementById('overlay-title');
+  var t = document.getElementById('overlay-title');
   t.textContent = title;
   t.style.color = green ? '#00f260' : '#ff4757';
   document.getElementById('overlay-text').textContent = text;
@@ -249,98 +328,100 @@ function hideOverlay() {
 
 // ===== ОТРИСОВКА =====
 function draw() {
-  // Фон
+  var tc = getThemeColors();
+
   if (currentMode === 'meme') {
-    const flash = Math.floor(Date.now() / 200) % 2 === 0;
-    ctx.fillStyle = flash ? '#1a0a2e' : '#0a0a12';
+    var flash = Math.floor(Date.now() / 200) % 2 === 0;
+    ctx.fillStyle = flash ? tc.memeBg1 : tc.memeBg2;
   } else {
-    ctx.fillStyle = '#0a0a12';
+    ctx.fillStyle = tc.bg;
   }
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Сетка
-  ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+  ctx.strokeStyle = tc.grid;
   ctx.lineWidth = 1;
-  for (let i = 0; i <= GRID_W; i++) {
+  for (var i = 0; i <= GRID_W; i++) {
     ctx.beginPath(); ctx.moveTo(i * TILE, 0); ctx.lineTo(i * TILE, canvas.height); ctx.stroke();
   }
-  for (let j = 0; j <= GRID_H; j++) {
+  for (var j = 0; j <= GRID_H; j++) {
     ctx.beginPath(); ctx.moveTo(0, j * TILE); ctx.lineTo(canvas.width, j * TILE); ctx.stroke();
   }
 
-  drawFood();
-  drawSnake();
+  drawFood(tc);
+  drawSnake(tc);
 }
 
-function drawFood() {
-  const cx = food.x * TILE + TILE / 2;
-  const cy = food.y * TILE + TILE / 2;
-  const r = TILE / 2 - 3;
+function drawFood(tc) {
+  var cx = food.x * TILE + TILE / 2;
+  var cy = food.y * TILE + TILE / 2;
+  var r = TILE / 2 - 3;
 
   if (currentMode === 'meme') {
-    // Пицца 🍕
-    ctx.shadowColor = '#ff9500';
+    ctx.shadowColor = tc.memeFoodGlow;
     ctx.shadowBlur = 12;
-    ctx.fillStyle = '#ff9500';
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.fillStyle = tc.memeFood;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
     ctx.shadowBlur = 0;
-    // Корочка
-    ctx.strokeStyle = '#cc6600';
+    ctx.strokeStyle = tc.memeFoodStroke;
     ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.stroke();
-    // Кусочки колбасы
-    ctx.fillStyle = '#cc0000';
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = tc.memeFoodDot;
     ctx.beginPath(); ctx.arc(cx - 3, cy - 2, 2, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(cx + 3, cy + 2, 2, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(cx + 1, cy - 4, 1.5, 0, Math.PI * 2); ctx.fill();
-  } else {
-    // Обычное яблоко
-    const pulse = Math.sin(Date.now() / 250) * 0.3 + 0.7;
-    ctx.shadowColor = '#ff3838';
+  } else if (tc.foodColor === 'apple') {
+    var pulse = Math.sin(Date.now() / 250) * 0.3 + 0.7;
+    ctx.shadowColor = tc.foodGlow;
     ctx.shadowBlur = 18 * pulse;
-    const grad = ctx.createRadialGradient(cx - 2, cy - 2, 1, cx, cy, r);
+    var grad = ctx.createRadialGradient(cx - 2, cy - 2, 1, cx, cy, r);
     grad.addColorStop(0, '#ff6b6b');
     grad.addColorStop(1, '#c0392b');
     ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
     ctx.shadowBlur = 0;
-    // Листик
-    ctx.fillStyle = '#2ecc71';
-    ctx.beginPath();
-    ctx.ellipse(cx + 3, cy - r + 1, 4, 2.5, -0.4, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.fillStyle = tc.leafColor;
+    ctx.beginPath(); ctx.ellipse(cx + 3, cy - r + 1, 4, 2.5, -0.4, 0, Math.PI * 2); ctx.fill();
+  } else {
+    var pulse2 = Math.sin(Date.now() / 250) * 0.3 + 0.7;
+    ctx.shadowColor = tc.foodGlow;
+    ctx.shadowBlur = 18 * pulse2;
+    ctx.fillStyle = tc.foodColor;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = tc.leafColor;
+    ctx.beginPath(); ctx.ellipse(cx + 3, cy - r + 1, 4, 2.5, -0.4, 0, Math.PI * 2); ctx.fill();
   }
 }
 
-function drawSnake() {
+function drawSnake(tc) {
   ctx.shadowBlur = 0;
-  for (let i = snake.length - 1; i >= 0; i--) {
-    const seg = snake[i];
-    const x = seg.x * TILE;
-    const y = seg.y * TILE;
-    const t = i / Math.max(snake.length - 1, 1);
+  for (var i = snake.length - 1; i >= 0; i--) {
+    var seg = snake[i];
+    var x = seg.x * TILE;
+    var y = seg.y * TILE;
+    var t = i / Math.max(snake.length - 1, 1);
 
-    let color;
-    if (currentMode === 'meme') {
-      // Радужная змея в мем-режиме
-      const hue = (i * 25 + Date.now() / 20) % 360;
-      color = `hsl(${hue},70%,55%)`;
+    var color;
+    if (currentMode === 'meme' && tc.memeSnake === 'rainbow') {
+      var hue = (i * 25 + Date.now() / 20) % 360;
+      color = 'hsl(' + hue + ',70%,55%)';
+    } else if (currentMode === 'meme') {
+      color = tc.memeSnake;
     } else {
-      const r1 = Math.round(0 + (5 - 0) * t);
-      const g1 = Math.round(242 + (117 - 242) * t);
-      const b1 = Math.round(96 + (230 - 96) * t);
-      color = `rgb(${r1},${g1},${b1})`;
+      var headRGB = hexToRgb(tc.snakeHead);
+      var tailRGB = hexToRgb(tc.snakeTail);
+      var rr = Math.round(headRGB.r + (tailRGB.r - headRGB.r) * t);
+      var gg = Math.round(headRGB.g + (tailRGB.g - headRGB.g) * t);
+      var bb = Math.round(headRGB.b + (tailRGB.b - headRGB.b) * t);
+      color = 'rgb(' + rr + ',' + gg + ',' + bb + ')';
     }
 
-    if (i === 0) { ctx.shadowColor = currentMode === 'meme' ? '#ffd700' : '#00f260'; ctx.shadowBlur = 15; }
+    if (i === 0) {
+      ctx.shadowColor = (currentMode === 'meme') ? '#ffd700' : tc.snakeHeadGlow;
+      ctx.shadowBlur = 15;
+    }
 
-    const pad = 2, size = TILE - pad * 2;
+    var pad = 2, size = TILE - pad * 2;
     ctx.fillStyle = color;
     roundRect(ctx, x + pad, y + pad, size, size, 6);
     ctx.fill();
@@ -352,37 +433,40 @@ function drawSnake() {
   }
 }
 
-function drawEyes(x, y) {
-  const cx = x + TILE / 2;
-  const cy = y + TILE / 2;
-  let ex1, ey1, ex2, ey2;
+function hexToRgb(hex) {
+  var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : { r: 255, g: 255, b: 255 };
+}
 
-  if (dx === 1) { ex1 = cx + 3; ey1 = cy - 4; ex2 = cx + 3; ey2 = cy + 4; }
+function drawEyes(x, y) {
+  var cx = x + TILE / 2;
+  var cy = y + TILE / 2;
+  var ex1, ey1, ex2, ey2;
+
+  if (dx === 1)       { ex1 = cx + 3; ey1 = cy - 4; ex2 = cx + 3; ey2 = cy + 4; }
   else if (dx === -1) { ex1 = cx - 3; ey1 = cy - 4; ex2 = cx - 3; ey2 = cy + 4; }
   else if (dy === -1) { ex1 = cx - 4; ey1 = cy - 3; ex2 = cx + 4; ey2 = cy - 3; }
-  else { ex1 = cx - 4; ey1 = cy + 3; ex2 = cx + 4; ey2 = cy + 3; }
+  else                { ex1 = cx - 4; ey1 = cy + 3; ex2 = cx + 4; ey2 = cy + 3; }
 
-  // Очки в мем-режиме
   if (currentMode === 'meme') {
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(cx - 5, cy - 1, 5, 0, Math.PI * 2);
-    ctx.arc(cx + 5, cy - 1, 5, 0, Math.PI * 2);
-    ctx.moveTo(cx, cy - 1);
-    ctx.lineTo(cx, cy - 1);
-    ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx - 5, cy - 1, 5, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx + 5, cy - 1, 5, 0, Math.PI * 2); ctx.stroke();
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
-    ctx.beginPath();
-    ctx.arc(cx - 5, cy - 1, 4, 0, Math.PI * 2);
-    ctx.arc(cx + 5, cy - 1, 4, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.beginPath(); ctx.arc(cx - 5, cy - 1, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + 5, cy - 1, 4, 0, Math.PI * 2); ctx.fill();
   }
 
-  ctx.fillStyle = '#fff';
-  ctx.beginPath(); ctx.arc(ex1, ey1, 2.5, 0, Math.PI * 2); ctx.arc(ex2, ey2, 2.5, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#000';
-  ctx.beginPath(); ctx.arc(ex1, ey1, 1.2, 0, Math.PI * 2); ctx.arc(ex2, ey2, 1.2, 0, Math.PI * 2); ctx.fill();
+  var eyeWhite = (settings.theme === 'invert') ? '#000' : '#fff';
+  var pupilColor = (settings.theme === 'invert') ? '#fff' : '#000';
+
+  ctx.fillStyle = eyeWhite;
+  ctx.beginPath(); ctx.arc(ex1, ey1, 2.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(ex2, ey2, 2.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = pupilColor;
+  ctx.beginPath(); ctx.arc(ex1, ey1, 1.2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(ex2, ey2, 1.2, 0, Math.PI * 2); ctx.fill();
 }
 
 function roundRect(ctx, x, y, w, h, r) {
@@ -399,35 +483,29 @@ function roundRect(ctx, x, y, w, h, r) {
 function update() {
   dx = pendingDx;
   dy = pendingDy;
-
-  const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+  var head = { x: snake[0].x + dx, y: snake[0].y + dy };
 
   if (currentMode === 'classic' || currentMode === 'meme') {
     if (head.x < 0 || head.x >= GRID_W || head.y < 0 || head.y >= GRID_H ||
-        snake.some(s => s.x === head.x && s.y === head.y)) {
-      gameOver();
-      return;
+        snake.some(function(s) { return s.x === head.x && s.y === head.y; })) {
+      gameOver(); return;
     }
   } else if (currentMode === 'accelerate') {
     if (head.x < 0) head.x = GRID_W - 1;
     if (head.x >= GRID_W) head.x = 0;
     if (head.y < 0) head.y = GRID_H - 1;
     if (head.y >= GRID_H) head.y = 0;
-    if (snake.some(s => s.x === head.x && s.y === head.y)) {
-      gameOver();
-      return;
+    if (snake.some(function(s) { return s.x === head.x && s.y === head.y; })) {
+      gameOver(); return;
     }
     speed = Math.max(45, 120 - Math.floor(score / 3) * 8);
   } else if (currentMode === 'immortal') {
     if (head.x < 0 || head.x >= GRID_W || head.y < 0 || head.y >= GRID_H ||
-        snake.some(s => s.x === head.x && s.y === head.y)) {
-      score = 0;
-      updateScore();
+        snake.some(function(s) { return s.x === head.x && s.y === head.y; })) {
+      score = 0; updateScore();
       snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
       dx = 0; dy = 0; pendingDx = 0; pendingDy = 0;
-      placeFood();
-      draw();
-      gameRunning = false;
+      placeFood(); draw(); gameRunning = false;
       showOverlay('Ой! Сброс очков', 'Нажми стрелку, чтобы продолжить', true);
       return;
     }
@@ -436,9 +514,7 @@ function update() {
   snake.unshift(head);
 
   if (head.x === food.x && head.y === food.y) {
-    score++;
-    updateScore();
-    placeFood();
+    score++; updateScore(); placeFood();
   } else {
     snake.pop();
   }
@@ -446,8 +522,8 @@ function update() {
 
 function gameOver() {
   stopGame();
-  const phrase = memePhrases[Math.floor(Math.random() * memePhrases.length)];
-  showOverlay('Игра окончена', `${phrase} | Счёт: ${score}`);
+  var phrase = memePhrases[Math.floor(Math.random() * memePhrases.length)];
+  showOverlay('Игра окончена', phrase + ' | Счёт: ' + score);
 }
 
 function loop() {
@@ -475,13 +551,14 @@ function handleDirection(ndx, ndy) {
   }
 }
 
-document.addEventListener('keydown', (e) => {
-  let ndx = 0, ndy = 0;
+// Клавиатура
+document.addEventListener('keydown', function(e) {
+  var ndx = 0, ndy = 0;
   switch (e.key) {
-    case 'ArrowUp': case 'w': case 'W': ndy = -1; break;
-    case 'ArrowDown': case 's': case 'S': ndy = 1; break;
-    case 'ArrowLeft': case 'a': case 'A': ndx = -1; break;
-    case 'ArrowRight': case 'd': case 'D': ndx = 1; break;
+    case 'ArrowUp':    case 'w': case 'W': ndy = -1; break;
+    case 'ArrowDown':  case 's': case 'S': ndy =  1; break;
+    case 'ArrowLeft':  case 'a': case 'A': ndx = -1; break;
+    case 'ArrowRight': case 'd': case 'D': ndx =  1; break;
     default: return;
   }
   e.preventDefault();
@@ -489,29 +566,32 @@ document.addEventListener('keydown', (e) => {
 });
 
 // Телефонные кнопки
-document.querySelectorAll('.touch-btn').forEach(btn => {
-  const dir = btn.dataset.dir;
-  const handler = (e) => {
+document.querySelectorAll('.touch-btn').forEach(function(btn) {
+  var dir = btn.dataset.dir;
+  var handler = function(e) {
     e.preventDefault();
-    if (dir === 'up') handleDirection(0, -1);
-    else if (dir === 'down') handleDirection(0, 1);
-    else if (dir === 'left') handleDirection(-1, 0);
+    if (dir === 'up')         handleDirection(0, -1);
+    else if (dir === 'down')  handleDirection(0, 1);
+    else if (dir === 'left')  handleDirection(-1, 0);
     else if (dir === 'right') handleDirection(1, 0);
   };
   btn.addEventListener('touchstart', handler, { passive: false });
   btn.addEventListener('click', handler);
 });
 
-// Свайпы по канвасу
-let touchStartX = 0, touchStartY = 0;
-canvas.addEventListener('touchstart', (e) => {
+// Свайпы — вешаем на game-wrap, а не на canvas,
+// чтобы свайп работал даже когда оверлей поверх canvas
+var touchStartX = 0, touchStartY = 0;
+var gameWrap = document.getElementById('game-wrap');
+
+gameWrap.addEventListener('touchstart', function(e) {
   touchStartX = e.touches[0].clientX;
   touchStartY = e.touches[0].clientY;
 }, { passive: true });
 
-canvas.addEventListener('touchend', (e) => {
-  const dxt = e.changedTouches[0].clientX - touchStartX;
-  const dyt = e.changedTouches[0].clientY - touchStartY;
+gameWrap.addEventListener('touchend', function(e) {
+  var dxt = e.changedTouches[0].clientX - touchStartX;
+  var dyt = e.changedTouches[0].clientY - touchStartY;
   if (Math.abs(dxt) < 20 && Math.abs(dyt) < 20) return;
   if (Math.abs(dxt) > Math.abs(dyt)) {
     handleDirection(dxt > 0 ? 1 : -1, 0);
@@ -519,6 +599,9 @@ canvas.addEventListener('touchend', (e) => {
     handleDirection(0, dyt > 0 ? 1 : -1);
   }
 }, { passive: true });
+
+// Инициализация
+applyControlSetting();
 </script>
 </body>
 </html>
