@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Разные змейки</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #1a1a1a;
+      color: #fff;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 { text-align: center; }
+    .game-container {
+      margin-bottom: 40px;
+      text-align: center;
+    }
+    canvas {
+      border: 4px solid #444;
+      box-shadow: 0 0 15px rgba(0,0,0,0.5);
+      background: #000;
+    }
+    .controls { margin-top: 10px; color: #ccc; }
+    button {
+      background: #333;
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover { background: #555; }
+  </style>
+</head>
+<body>
+  <h1>Разные змейки</h1>
+
+  <!-- Классическая змейка -->
+  <div class="game-container">
+    <h2>Классическая змейка</h2>
+    <canvas id="canvas1" width="400" height="400"></canvas>
+    <div class="controls">WASD или стрелки. Цель: есть еду, не врезаться.</div>
+    <button onclick="resetGame(1)">Перезапуск</button>
+  </div>
+
+  <!-- Змейка с ускорением -->
+  <div class="game-container">
+    <h2>Змейка с ускорением</h2>
+    <canvas id="canvas2" width="400" height="400"></canvas>
+    <div class="controls">WASD или стрелки. Чем больше еды — тем быстрее.</div>
+    <button onclick="resetGame(2)">Перезапуск</button>
+  </div>
+
+  <!-- Бессмертная змейка -->
+  <div class="game-container">
+    <h2>Бессмертная змейка</h2>
+    <canvas id="canvas3" width="400" height="400"></canvas>
+    <div class="controls">WASD или стрелки. При столкновении — сброс очков, игра продолжается.</div>
+    <button onclick="resetGame(3)">Перезапуск</button>
+  </div>
+
+  <script>
+    const games = {};
+
+    function createGame(canvasId, options) {
+      const canvas = document.getElementById(canvasId);
+      const ctx = canvas.getContext('2d');
+      const tileSize = 20;
+      const gridW = canvas.width / tileSize;
+      const gridH = canvas.height / tileSize;
+
+      let snake = [{ x: 5, y: 5 }];
+      let food = { x: Math.floor(Math.random() * gridW), y: Math.floor(Math.random() * gridH) };
+      let dx = 0, dy = 0;
+      let score = 0;
+      let gameRunning = false;
+      let frameId;
+      let speed = 100; // мс между кадрами
+
+      function randomFood() {
+        do {
+          food.x = Math.floor(Math.random() * gridW);
+          food.y = Math.floor(Math.random() * gridH);
+        } while (snake.some(s => s.x === food.x && s.y === food.y));
+      }
+
+      function draw() {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // еда
+        ctx.fillStyle = '#f00';
+        ctx.fillRect(food.x * tileSize, food.y * tileSize, tileSize - 2, tileSize - 2);
+
+        // змея
+        snake.forEach((part, i) => {
+          const h = Math.floor((i * 150) % 360);
+          ctx.fillStyle = `hsl(${h}, 70%, 50%)`;
+          ctx.fillRect(part.x * tileSize, part.y * tileSize, tileSize - 2, tileSize - 2);
+        });
+
+        // счёт
+        ctx.fillStyle = '#fff';
+        ctx.font = '20px Arial';
+        ctx.fillText('Счёт: ' + score, 10, 30);
+      }
+
+      function update() {
+        if (!gameRunning) return;
+
+        const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+
+        // обработка столкновений
+        let gameOver = false;
+        if (options.mode === 'classic') {
+          if (head.x < 0 || head.x >= gridW || head.y < 0 || head.y >= gridH) gameOver = true;
+          for (let i = 1; i < snake.length; i++) {
+            if (head.x === snake[i].x && head.y === snake[i].y) gameOver = true;
+          }
+        } else if (options.mode === 'accelerate') {
+          // границы — телепорт
+          if (head.x < 0) head.x = gridW - 1;
+          if (head.x >= gridW) head.x = 0;
+          if (head.y < 0) head.y = gridH - 1;
+          if (head.y >= gridH) head.y = 0;
+          // ускорение
+          const targetSpeed = Math.max(40, 100 - Math.floor(score / 3) * 10);
+          speed = targetSpeed;
+        } else if (options.mode === 'immortal') {
+          // бессмертие: при столкновении сбрасываем счёт и позицию
+          if (head.x < 0 || head.x >= gridW || head.y < 0 || head.y >= gridH) {
+            score = 0; snake = [{x:5,y:5}]; dx=0; dy=0; randomFood();
+            draw(); return;
+          }
+          for (let i = 1; i < snake.length; i++) {
+            if (head.x === snake[i].x && head.y === snake[i].y) {
+              score = 0; snake = [{x:5,y:5}]; dx=0; dy=0; randomFood();
+              draw(); return;
+            }
+          }
+        }
+
+        if (gameOver) {
+          gameRunning = false;
+          ctx.fillStyle = 'rgba(0,0,0,0.7)';
+          ctx.fillRect(0,0,canvas.width,canvas.height);
+          ctx.fillStyle = '#ff4444';
+          ctx.font = 'bold 30px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText('Игра окончена', canvas.width/2, canvas.height/2 - 15);
+          ctx.fillStyle = '#fff';
+          ctx.font = '20px Arial';
+          ctx.fillText(`Счёт: ${score}`, canvas.width/2, canvas.height/2 + 20);
+          return;
+        }
+
+        // движение
+        snake.unshift(head);
+        if (head.x === food.x && head.y === food.y) {
+          score++;
+          randomFood();
+        } else {
+          snake.pop();
+        }
+      }
+
+      function loop() {
+        update();
+        draw();
+        if (gameRunning) frameId = setTimeout(loop, speed);
+      }
+
+      function start() {
+        if (gameRunning) return;
+        gameRunning = true;
+        loop();
+      }
+
+      // управление
+      document.addEventListener('keydown', e => {
+        // чтобы не перехватывать нажатия на кнопки
+        if (e.target.tagName === 'BUTTON') return;
+
+        let newDx = 0, newDy = 0;
+        switch (e.key) {
+          case 'ArrowUp': case 'w': case 'W': newDx = 0; newDy = -1; break;
+          case 'ArrowDown': case 's': case 'S': newDx = 0; newDy = 1; break;
+          case 'ArrowLeft': case 'a': case 'A': newDx = -1; newDy = 0; break;
+          case 'ArrowRight': case 'd': case 'D': newDx = 1; newDy = 0; break;
+          default: return;
+        }
+        // нельзя резко развернуться на 180
+        if (!(newDx === -dx && newDy === -dy)) {
+          dx = newDx;
+          dy = newDy;
+          if (!gameRunning) start();
+        }
+      });
+
+      games[canvasId] = { reset: () => {
+        snake = [{ x: 5, y: 5 }]; dx = 0; dy = 0; score = 0; speed = 100; gameRunning = false;
+        randomFood(); draw();
+      }};
+    }
+
+    // Инициализация трёх игр
+    createGame('canvas1', { mode: 'classic' });
+    createGame('canvas2', { mode: 'accelerate' });
+    createGame('canvas3', { mode: 'immortal' });
+
+    window.resetGame = function(id) {
+      const ids = ['canvas1','canvas2','canvas3'];
+      if (games[ids[id-1]]) games[ids[id-1]].reset();
+    };
+  </script>
+</body>
+</html>
