@@ -2,8 +2,8 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  < <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Змейка — коллекция игр</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Змейка — Проект для 5</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -12,8 +12,10 @@
       color: #fff;
       min-height: 100vh;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
+      overflow-x: hidden;
     }
     #menu {
       text-align: center;
@@ -21,6 +23,8 @@
       width: 100%;
       padding: 40px 20px;
       animation: fadeIn 0.5s ease;
+      z-index: 10;
+      position: relative;
     }
     #menu h1 {
       font-size: 3rem;
@@ -41,6 +45,7 @@
       gap: 24px;
     }
     @media (max-width: 700px) { .menu-grid { grid-template-columns: 1fr; } }
+    
     .menu-card {
       background: rgba(255,255,255,0.05);
       border: 1px solid rgba(255,255,255,0.1);
@@ -49,6 +54,14 @@
       cursor: pointer;
       transition: all 0.3s ease;
       text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    /* Эффект при тройном клике для пасхалки */
+    .menu-card.triple-click {
+      transform: scale(1.1) rotate(5deg);
+      background: rgba(255, 215, 0, 0.15);
+      border-color: #ffd700;
     }
     .menu-card:hover {
       background: rgba(255,255,255,0.12);
@@ -135,11 +148,11 @@
       z-index: 10;
     }
     .overlay.hidden { display: none; }
-    .overlay h3 { font-size: 2rem; color: #ff4757; }
+    .overlay h3 { font-size: 2rem; color: #ff4757; text-shadow: 0 0 10px #000; }
     .overlay p { font-size: 1.2rem; color: #fff; }
     .overlay .start-hint { font-size: 1rem; color: #00f260; }
 
-    /* ===== ТЕЛЕФОННЫЕ КНОПКИ ===== */
+    /* ТЕЛЕФОННЫЕ КНОПКИ */
     .touch-controls {
       display: none;
       margin-top: 20px;
@@ -161,7 +174,6 @@
       justify-content: center;
       cursor: pointer;
       user-select: none;
-      -webkit-user-select: none;
       transition: background 0.15s;
     }
     .touch-btn:active { background: rgba(0,242,96,0.3); }
@@ -173,6 +185,23 @@
     @media (max-width: 768px) {
       .touch-controls { display: block; }
     }
+
+    /* ПОДПИСЬ ВНИЗУ */
+    .footer-warning {
+      margin-top: 40px;
+      padding: 20px;
+      background: rgba(0,0,0,0.3);
+      border-top: 1px dashed #444;
+      border-bottom: 1px dashed #444;
+      text-align: center;
+      font-size: 0.85rem;
+      line-height: 1.4;
+      color: #ff5252;
+      max-width: 500px;
+      width: 100%;
+    }
+    .footer-warning strong { color: #fff; font-weight: bold; }
+    .footer-warning span { color: #ccc; font-style: italic; }
 
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
@@ -186,20 +215,26 @@
     <h1>🐍 Змейка</h1>
     <p class="subtitle">Выбери режим и играй!</p>
     <div class="menu-grid">
-      <div class="menu-card" onclick="openGame('classic')">
+      <div class="menu-card" onclick="handleCardClick(this, 'classic')">
         <div class="icon">🎯</div>
         <h2>Классическая</h2>
-        <p>Стандартные правила. Стены и собственный хвост убивают. Набери максимум очков.</p>
+        <p>Стандартные правила. Стены и хвост убивают. Набери максимум очков.</p>
       </div>
-      <div class="menu-card" onclick="openGame('accelerate')">
+      <div class="menu-card" onclick="handleCardClick(this, 'accelerate')">
         <div class="icon">⚡</div>
         <h2>С ускорением</h2>
         <p>Стены телепортируют, но с каждым куском змейка становится всё быстрее.</p>
       </div>
-      <div class="menu-card" onclick="openGame('immortal')">
+      <div class="menu-card" onclick="handleCardClick(this, 'immortal')">
         <div class="icon">♾️</div>
         <h2>Бессмертная</h2>
         <p>Нельзя умереть — при столкновении счёт сбрасывается, змея начинает заново.</p>
+      </div>
+      <!-- Скрытая карточка для мема -->
+      <div class="menu-card hidden-meme" onclick="openMemeMode()" style="display:none;">
+        <div class="icon">😎</div>
+        <h2>Мемный режим</h2>
+        <p>Только для избранных. Тут всё по-другому.</p>
       </div>
     </div>
   </div>
@@ -232,6 +267,12 @@
     </div>
   </div>
 
+  <!-- ТА САМАЯ НАДПИСЬ -->
+  <div class="footer-warning">
+    ⚠️ <strong>Проект защищён двумя 9-классниками!</strong><br>
+    <span>Если украдёшь код — они найдут тебя даже в Minecraft. Шучу (но не совсем).</span>
+  </div>
+
   <script>
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
@@ -240,300 +281,36 @@
     const GRID_H = canvas.height / TILE;
 
     let snake, food, dx, dy, score, gameRunning, speed, timeoutId;
-    let currentMode = null;
+    let currentMode = null; // 'classic', 'accelerate', 'immortal', 'meme'
     let pendingDx = 0, pendingDy = 0;
+
+    // Мемные фразы при проигрыше
+    const memePhrases = [
+      "Ну вот, опять не хватило 1 кусочка до рекорда 😔",
+      "Змея сказала: «Я так не играю» 🐍",
+      "Game Over. Даже кот бы сыграл лучше. (Прости, кот)",
+      "Ты врезался в стену. Стена победила.",
+      "Это была не твоя вина. Это баг в матрице.",
+      "Попробуй ещё раз. Змея верит в тебя!",
+      "Счёт: 0. Зато красиво умер."
+    ];
 
     const modeInfo = {
       classic:    { title: '🎯 Классическая змейка', desc: 'Стены и хвост убивают. Набери максимум!' },
       accelerate: { title: '⚡ Змейка с ускорением',  desc: 'Стены телепортируют, скорость растёт!' },
-      immortal:   { title: '♾️ Бессмертная змейка',   desc: 'При столкновении — сброс очков и заново.' }
+      immortal:   { title: '♾️ Бессмертная змейка',   desc: 'При столкновении — сброс очков и заново.' },
+      meme:       { title: '😎 Мемный режим',         desc: 'Пицца вместо яблок, змея в очках, фон мигает.' }
     };
 
-    function openGame(mode) {
-      currentMode = mode;
-      document.getElementById('menu').style.display = 'none';
-      document.getElementById('game-screen').style.display = 'flex';
-      document.getElementById('game-title').textContent = modeInfo[mode].title;
-      document.getElementById('game-desc').textContent = modeInfo[mode].desc;
-      initGame();
-      showOverlay('Нажми любую стрелку', '', true);
-    }
+    // Логика тройного клика для открытия мем-режима
+    const clickCounts = {};
+    function handleCardClick(card, mode) {
+      if (!clickCounts[mode]) clickCounts[mode] = 0;
+      clickCounts[mode]++;
+      
+      // Визуальный эффект тройного клика
+      card.classList.add('triple-click');
+      setTimeout(() => card.classList.remove('triple-click'), 200);
 
-    function backToMenu() {
-      stopGame();
-      document.getElementById('game-screen').style.display = 'none';
-      document.getElementById('menu').style.display = 'block';
-    }
-
-    function restartCurrent() {
-      initGame();
-      showOverlay('Нажми любую стрелку', '', true);
-    }
-
-    function initGame() {
-      stopGame();
-      snake = [
-        { x: 10, y: 10 },
-        { x: 9, y: 10 },
-        { x: 8, y: 10 }
-      ];
-      dx = 0; dy = 0;
-      pendingDx = 0; pendingDy = 0;
-      score = 0;           // <--- СЧЁТ СБРАСЫВАЕТСя ПРИ КАЖДОЙ НОВОЙ ИГРЕ
-      speed = 120;
-      gameRunning = false;
-      placeFood();
-      updateScore();
-      draw();
-    }
-
-    function stopGame() {
-      if (timeoutId) { clearTimeout(timeoutId); timeoutId = null; }
-      gameRunning = false;
-    }
-
-    function placeFood() {
-      do {
-        food = { x: Math.floor(Math.random() * GRID_W), y: Math.floor(Math.random() * GRID_H) };
-      } while (snake.some(s => s.x === food.x && s.y === food.y));
-    }
-
-    function updateScore() {
-      document.getElementById('score').textContent = score;
-    }
-
-    function showOverlay(title, text, green = false) {
-      const ov = document.getElementById('overlay');
-      ov.classList.remove('hidden');
-      document.getElementById('overlay-title').textContent = title;
-      document.getElementById('overlay-title').style.color = green ? '#00f260' : '#ff4757';
-      document.getElementById('overlay-text').textContent = text;
-    }
-
-    function hideOverlay() {
-      document.getElementById('overlay').classList.add('hidden');
-    }
-
-    // ===== ОТРИСОВКА =====
-    function draw() {
-      ctx.fillStyle = '#0a0a12';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      ctx.strokeStyle = 'rgba(255,255,255,0.03)';
-      ctx.lineWidth = 1;
-      for (let i = 0; i <= GRID_W; i++) {
-        ctx.beginPath(); ctx.moveTo(i * TILE, 0); ctx.lineTo(i * TILE, canvas.height); ctx.stroke();
-      }
-      for (let j = 0; j <= GRID_H; j++) {
-        ctx.beginPath(); ctx.moveTo(0, j * TILE); ctx.lineTo(canvas.width, j * TILE); ctx.stroke();
-      }
-
-      drawFood();
-      drawSnake();
-    }
-
-    function drawFood() {
-      const cx = food.x * TILE + TILE / 2;
-      const cy = food.y * TILE + TILE / 2;
-      const r = TILE / 2 - 3;
-      const pulse = Math.sin(Date.now() / 250) * 0.3 + 0.7;
-
-      ctx.shadowColor = '#ff3838';
-      ctx.shadowBlur = 18 * pulse;
-
-      const grad = ctx.createRadialGradient(cx - 2, cy - 2, 1, cx, cy, r);
-      grad.addColorStop(0, '#ff6b6b');
-      grad.addColorStop(1, '#c0392b');
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = '#2ecc71';
-      ctx.beginPath();
-      ctx.ellipse(cx + 3, cy - r + 1, 4, 2.5, -0.4, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    function drawSnake() {
-      ctx.shadowBlur = 0;
-      for (let i = snake.length - 1; i >= 0; i--) {
-        const seg = snake[i];
-        const x = seg.x * TILE;
-        const y = seg.y * TILE;
-        const t = i / Math.max(snake.length - 1, 1);
-
-        const r1 = Math.round(0 + (5 - 0) * t);
-        const g1 = Math.round(242 + (117 - 242) * t);
-        const b1 = Math.round(96 + (230 - 96) * t);
-        const color = `rgb(${r1},${g1},${b1})`;
-
-        if (i === 0) { ctx.shadowColor = '#00f260'; ctx.shadowBlur = 15; }
-        else { ctx.shadowBlur = 0; }
-
-        const pad = 2;
-        const size = TILE - pad * 2;
-        ctx.fillStyle = color;
-        roundRect(ctx, x + pad, y + pad, size, size, 6);
-        ctx.fill();
-
-        if (i === 0) { ctx.shadowBlur = 0; drawEyes(x, y); }
-      }
-    }
-
-    function drawEyes(x, y) {
-      const cx = x + TILE / 2;
-      const cy = y + TILE / 2;
-      let ex1, ey1, ex2, ey2;
-
-      if (dx === 1)       { ex1 = cx + 3; ey1 = cy - 4; ex2 = cx + 3; ey2 = cy + 4; }
-      else if (dx === -1)  { ex1 = cx - 3; ey1 = cy - 4; ex2 = cx - 3; ey2 = cy + 4; }
-      else if (dy === -1) { ex1 = cx - 4; ey1 = cy - 3; ex2 = cx + 4; ey2 = cy - 3; }
-      else                { ex1 = cx - 4; ey1 = cy + 3; ex2 = cx + 4; ey2 = cy + 3; }
-
-      ctx.fillStyle = '#fff';
-      ctx.beginPath(); ctx.arc(ex1, ey1, 2.5, 0, Math.PI * 2); ctx.arc(ex2, ey2, 2.5, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#000';
-      ctx.beginPath(); ctx.arc(ex1, ey1, 1.2, 0, Math.PI * 2); ctx.arc(ex2, ey2, 1.2, 0, Math.PI * 2); ctx.fill();
-    }
-
-    function roundRect(ctx, x, y, w, h, r) {
-      ctx.beginPath();
-      ctx.moveTo(x + r, y);
-      ctx.arcTo(x + w, y, x + w, y + h, r);
-      ctx.arcTo(x + w, y + h, x, y + h, r);
-      ctx.arcTo(x, y + h, x, y, r);
-      ctx.arcTo(x, y, x + w, y, r);
-      ctx.closePath();
-    }
-
-    // ===== ИГРОВАЯ ЛОГИКА =====
-    function update() {
-      dx = pendingDx;
-      dy = pendingDy;
-
-      const head = { x: snake[0].x + dx, y: snake[0].y + dy };
-
-      if (currentMode === 'classic') {
-        if (head.x < 0 || head.x >= GRID_W || head.y < 0 || head.y >= GRID_H ||
-            snake.some(s => s.x === head.x && s.y === head.y)) {
-          gameOver();
-          return;
-        }
-      } else if (currentMode === 'accelerate') {
-        if (head.x < 0) head.x = GRID_W - 1;
-        if (head.x >= GRID_W) head.x = 0;
-        if (head.y < 0) head.y = GRID_H - 1;
-        if (head.y >= GRID_H) head.y = 0;
-        if (snake.some(s => s.x === head.x && s.y === head.y)) {
-          gameOver();
-          return;
-        }
-        speed = Math.max(45, 120 - Math.floor(score / 3) * 8);
-      } else if (currentMode === 'immortal') {
-        if (head.x < 0 || head.x >= GRID_W || head.y < 0 || head.y >= GRID_H ||
-            snake.some(s => s.x === head.x && s.y === head.y)) {
-          // сброс очков и продолжение
-          score = 0;
-          updateScore();
-          snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
-          dx = 0; dy = 0; pendingDx = 0; pendingDy = 0;
-          placeFood();
-          draw();
-          gameRunning = false;
-          showOverlay('Ой! Сброс очков', 'Нажми стрелку, чтобы продолжить', true);
-          return;
-        }
-      }
-
-      snake.unshift(head);
-
-      if (head.x === food.x && head.y === food.y) {
-        score++;
-        updateScore();
-        placeFood();
-      } else {
-        snake.pop();
-      }
-    }
-
-    function gameOver() {
-      stopGame();
-      showOverlay('Игра окончена', `Счёт: ${score}`);
-    }
-
-    function loop() {
-      update();
-      if (gameRunning) {
-        draw();
-        timeoutId = setTimeout(loop, speed);
-      }
-    }
-
-    function startLoop() {
-      if (gameRunning) return;
-      gameRunning = true;
-      hideOverlay();
-      loop();
-    }
-
-    // ===== УПРАВЛЕНИЕ С КЛАВИАТУРЫ =====
-    document.addEventListener('keydown', (e) => {
-      let ndx = 0, ndy = 0;
-      switch (e.key) {
-        case 'ArrowUp':    case 'w': case 'W': ndy = -1; break;
-        case 'ArrowDown':  case 's': case 'S': ndy =  1; break;
-        case 'ArrowLeft':  case 'a': case 'A': ndx = -1; break;
-        case 'ArrowRight': case 'd': case 'D': ndx =  1; break;
-        default: return;
-      }
-      e.preventDefault();
-      handleDirection(ndx, ndy);
-    });
-
-    // ===== УПРАВЛЕНИЕ С ТЕЛЕФОНА =====
-    function handleDirection(ndx, ndy) {
-      if (!currentMode || document.getElementById('game-screen').style.display === 'none') return;
-      if (!(ndx === -dx && ndy === -dy)) {
-        pendingDx = ndx;
-        pendingDy = ndy;
-        if (!gameRunning) startLoop();
-      }
-    }
-
-    document.querySelectorAll('.touch-btn').forEach(btn => {
-      const dir = btn.dataset.dir;
-      const handler = (e) => {
-        e.preventDefault();
-        switch (dir) {
-          case 'up':    handleDirection(0, -1); break;
-          case 'down':  handleDirection(0,  1); break;
-          case 'left':  handleDirection(-1, 0); break;
-          case 'right': handleDirection(1,  0); break;
-        }
-      };
-      btn.addEventListener('touchstart', handler, { passive: false });
-      btn.addEventListener('click', handler);
-    });
-
-    // свайпы по канвасу
-    let touchStartX = 0, touchStartY = 0;
-    canvas.addEventListener('touchstart', (e) => {
-      touchStartX = e.touches[0].clientX;
-      touchStartY = e.touches[0].clientY;
-    }, { passive: true });
-
-    canvas.addEventListener('touchend', (e) => {
-      const dxTouch = e.changedTouches[0].clientX - touchStartX;
-      const dyTouch = e.changedTouches[0].clientY - touchStartY;
-      if (Math.abs(dxTouch) < 20 && Math.abs(dyTouch) < 20) return;
-      if (Math.abs(dxTouch) > Math.abs(dyTouch)) {
-        handleDirection(dxTouch > 0 ? 1 : -1, 0);
-      } else {
-        handleDirection(0, dyTouch > 0 ? 1 : -1);
-      }
-    }, { passive: true });
-  </script>
-</body>
-</html>
+      if (clickCounts[mode] >= 3) {
+        // Показываем мем-карточку
