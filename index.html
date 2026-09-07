@@ -61,7 +61,6 @@ canvas { display:block; background:#0a0a12; border-radius:14px; }
 .settings-opt.active { border-color:#00f260; background:rgba(0,242,96,.15); color:#00f260; }
 .settings-close { width:100%; background:linear-gradient(135deg,#00f260,#0575e6); color:#000; border:none; padding:12px; border-radius:10px; cursor:pointer; font-weight:700; font-size:1rem; margin-top:10px; }
 .settings-close:hover { transform:scale(1.02); }
-.food-preview { width:48px; height:48px; display:flex; align-items:center; justify-content:center; font-size:2rem; }
 .color-swatch { width:48px; height:48px; border-radius:50%; cursor:pointer; border:3px solid transparent; transition:all .2s; }
 .color-swatch:hover { transform:scale(1.15); }
 .color-swatch.active { border-color:#fff; box-shadow:0 0 12px rgba(255,255,255,.5); }
@@ -130,7 +129,6 @@ canvas { display:block; background:#0a0a12; border-radius:14px; }
   <span>Если украдёшь код — они найдут тебя даже в Minecraft. Шучу (но не совсем).</span>
 </div>
 
-<!-- НАСТРОЙКИ -->
 <div id="settings-panel">
   <div class="settings-box">
     <h2>⚙️ Настройки</h2>
@@ -163,7 +161,6 @@ canvas { display:block; background:#0a0a12; border-radius:14px; }
   </div>
 </div>
 
-<!-- КАСТОМИЗАЦИЯ -->
 <div id="customize-panel">
   <div class="settings-box">
     <h2>🎨 Кастомизация</h2>
@@ -209,16 +206,15 @@ var BASE_SPEED = 145;
 
 var snakeColors = [
   { id: 'default', name: 'По умолчанию', head: '#00f260', tail: '#0575e6', glow: '#00f260' },
-  { id: 'red',    name: 'Красная',       head: '#ff4757', tail: '#c0392b', glow: '#ff4757' },
-  { id: 'purple', name: 'Фиолетовая',   head: '#a55eea', tail: '#6c5ce7', glow: '#a55eea' },
-  { id: 'orange', name: 'Оранжевая',    head: '#ffa502', tail: '#e67e22', glow: '#ffa502' },
-  { id: 'pink',   name: 'Розовая',      head: '#ff6b81', tail: '#e84393', glow: '#ff6b81' },
-  { id: 'cyan',   name: 'Голубая',      head: '#00d2d3', tail: '#0984e3', glow: '#00d2d3' },
-  { id: 'gold',   name: 'Золотая',      head: '#ffd700', tail: '#f39c12', glow: '#ffd700' },
-  { id: 'white',  name: 'Белая',        head: '#ffffff', tail: '#aaaaaa', glow: '#ffffff' }
+  { id: 'red',     name: 'Красная',      head: '#ff4757', tail: '#c0392b', glow: '#ff4757' },
+  { id: 'purple',  name: 'Фиолетовая',   head: '#a55eea', tail: '#6c5ce7', glow: '#a55eea' },
+  { id: 'orange',  name: 'Оранжевая',    head: '#ffa502', tail: '#e67e22', glow: '#ffa502' },
+  { id: 'pink',    name: 'Розовая',      head: '#ff6b81', tail: '#e84393', glow: '#ff6b81' },
+  { id: 'cyan',    name: 'Голубая',      head: '#00d2d3', tail: '#0984e3', glow: '#00d2d3' },
+  { id: 'gold',    name: 'Золотая',      head: '#ffd700', tail: '#f39c12', glow: '#ffd700' },
+  { id: 'white',   name: 'Белая',        head: '#ffffff', tail: '#aaaaaa', glow: '#ffffff' }
 ];
 
-// Создаём цветовые свотчи
 (function() {
   var row = document.getElementById('color-row');
   snakeColors.forEach(function(c) {
@@ -273,30 +269,38 @@ function setupGrid() {
 }
 
 function randomStart() {
-  var margin = 1;
-  var startX = margin + Math.floor(Math.random() * Math.max(1, GRID_W - margin * 2));
-  var startY = margin + Math.floor(Math.random() * Math.max(1, GRID_H - margin * 2));
   var horizontal = Math.random() < 0.5;
   var dir = Math.random() < 0.5 ? 1 : -1;
   var s = [];
-  for (var i = 0; i < 3; i++) {
-    if (horizontal) {
-      var x = startX - dir * i;
-      if (x < 0) x = 0;
-      if (x >= GRID_W) x = GRID_W - 1;
-      s.push({ x: x, y: startY });
+
+  if (horizontal) {
+    var startY = 1 + Math.floor(Math.random() * Math.max(1, GRID_H - 2));
+    var startX;
+    if (dir > 0) {
+      startX = 2 + Math.floor(Math.random() * Math.max(1, GRID_W - 1 - 2));
     } else {
-      var y = startY - dir * i;
-      if (y < 0) y = 0;
-      if (y >= GRID_H) y = GRID_H - 1;
-      s.push({ x: startX, y: y });
+      startX = 1 + Math.floor(Math.random() * Math.max(1, GRID_W - 2 - 1));
+    }
+    for (var i = 0; i < 3; i++) {
+      s.push({ x: startX - dir * i, y: startY });
+    }
+  } else {
+    var startX2 = 1 + Math.floor(Math.random() * Math.max(1, GRID_W - 2));
+    var startY2;
+    if (dir > 0) {
+      startY2 = 2 + Math.floor(Math.random() * Math.max(1, GRID_H - 1 - 2));
+    } else {
+      startY2 = 1 + Math.floor(Math.random() * Math.max(1, GRID_H - 2 - 1));
+    }
+    for (var j = 0; j < 3; j++) {
+      s.push({ x: startX2, y: startY2 - dir * j });
     }
   }
   return s;
 }
 
 function getSnakeColors() {
-  if (currentMode === 'meme') return null; // мем-режим использует радугу
+  if (currentMode === 'meme') return null;
   for (var i = 0; i < snakeColors.length; i++) {
     if (snakeColors[i].id === settings.snakeColor) return snakeColors[i];
   }
@@ -329,7 +333,6 @@ var modeInfo = {
   meme:       { title:'😎 Мемный режим',         desc:'Пицца, очки, мигающий фон. Попробуй!' }
 };
 
-// ===== ТРОЙНОЙ КЛИК =====
 var cardData = {};
 document.querySelectorAll('.menu-card').forEach(function(card) {
   var mode = card.dataset.mode;
@@ -409,7 +412,6 @@ function showOverlay(title, text, green) {
 
 function hideOverlay() { document.getElementById('overlay').classList.add('hidden'); }
 
-// ===== ОТРИСОВКА =====
 function draw() {
   var tc = getThemeColors();
   if (currentMode === 'meme') {
@@ -434,7 +436,6 @@ function drawFood() {
   var r = Math.max(4, TILE / 2 - 3);
 
   if (currentMode === 'meme') {
-    // Пицца
     ctx.shadowColor = '#ff9500'; ctx.shadowBlur = 12;
     ctx.fillStyle = '#ff9500';
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
@@ -495,7 +496,6 @@ function drawFood() {
     ctx.stroke();
   } else if (foodType === 'coffee') {
     ctx.shadowColor = '#8d6e63'; ctx.shadowBlur = 12 * pulse;
-    // Чашка
     ctx.fillStyle = '#fff';
     ctx.beginPath();
     ctx.moveTo(cx - r*0.7, cy - r*0.3);
@@ -505,15 +505,12 @@ function drawFood() {
     ctx.closePath();
     ctx.fill();
     ctx.shadowBlur = 0;
-    // Кофе внутри
     ctx.fillStyle = '#5d4037';
     ctx.beginPath(); ctx.ellipse(cx, cy - r*0.25, r*0.6, r*0.15, 0, 0, Math.PI*2); ctx.fill();
-    // Ручка
     ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5;
     ctx.beginPath();
     ctx.arc(cx + r*0.85, cy + r*0.1, r*0.35, -Math.PI*0.4, Math.PI*0.4);
     ctx.stroke();
-    // Пар
     ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(cx - r*0.2, cy - r*0.5);
@@ -529,7 +526,6 @@ function drawFood() {
 function drawSnake() {
   ctx.shadowBlur = 0;
   var sc = getSnakeColors();
-  var tc = getThemeColors();
 
   for (var i = snake.length - 1; i >= 0; i--) {
     var seg = snake[i];
@@ -545,13 +541,11 @@ function drawSnake() {
       var v = Math.round(255 - (255 - 85) * t);
       color = 'rgb(' + v + ',' + v + ',' + v + ')';
     } else if (settings.theme === 'invert' && settings.snakeColor === 'default') {
-      var headRGB = hexToRgb('#0575e6');
-      var tailRGB = hexToRgb('#00f260');
-      color = 'rgb(' + Math.round(headRGB.r+(tailRGB.r-headRGB.r)*t) + ',' + Math.round(headRGB.g+(tailRGB.g-headRGB.g)*t) + ',' + Math.round(headRGB.b+(tailRGB.b-headRGB.b)*t) + ')';
+      var hR = hexToRgb('#0575e6'), tR = hexToRgb('#00f260');
+      color = 'rgb(' + Math.round(hR.r+(tR.r-hR.r)*t) + ',' + Math.round(hR.g+(tR.g-hR.g)*t) + ',' + Math.round(hR.b+(tR.b-hR.b)*t) + ')';
     } else if (sc) {
-      var headRGB2 = hexToRgb(sc.head);
-      var tailRGB2 = hexToRgb(sc.tail);
-      color = 'rgb(' + Math.round(headRGB2.r+(tailRGB2.r-headRGB2.r)*t) + ',' + Math.round(headRGB2.g+(tailRGB2.g-headRGB2.g)*t) + ',' + Math.round(headRGB2.b+(tailRGB2.b-headRGB2.b)*t) + ')';
+      var hR2 = hexToRgb(sc.head), tR2 = hexToRgb(sc.tail);
+      color = 'rgb(' + Math.round(hR2.r+(tR2.r-hR2.r)*t) + ',' + Math.round(hR2.g+(tR2.g-hR2.g)*t) + ',' + Math.round(hR2.b+(tR2.b-hR2.b)*t) + ')';
     } else {
       color = '#00f260';
     }
@@ -621,7 +615,6 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-// ===== ИГРОВАЯ ЛОГИКА =====
 function update() {
   dx = pendingDx; dy = pendingDy;
   var head = { x: snake[0].x + dx, y: snake[0].y + dy };
@@ -662,7 +655,6 @@ function gameOver() {
 function loop() { update(); if (gameRunning) { draw(); timeoutId = setTimeout(loop, speed); } }
 function startLoop() { if (gameRunning) return; gameRunning = true; hideOverlay(); loop(); }
 
-// ===== УПРАВЛЕНИЕ =====
 function handleDirection(ndx, ndy) {
   if (!currentMode || document.getElementById('game-screen').style.display === 'none') return;
   if (ndx !== 0 && ndx === -dx && dy === 0) return;
