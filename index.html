@@ -56,6 +56,7 @@
       text-align: center;
       position: relative;
       overflow: hidden;
+      user-select: none; /* чтобы текст не выделялся при кликах */
     }
     /* Эффект при тройном клике для пасхалки */
     .menu-card.triple-click {
@@ -215,23 +216,23 @@
     <h1>🐍 Змейка</h1>
     <p class="subtitle">Выбери режим и играй!</p>
     <div class="menu-grid">
-      <div class="menu-card" onclick="handleCardClick(this, 'classic')">
+      <div class="menu-card" id="card-classic">
         <div class="icon">🎯</div>
         <h2>Классическая</h2>
         <p>Стандартные правила. Стены и хвост убивают. Набери максимум очков.</p>
       </div>
-      <div class="menu-card" onclick="handleCardClick(this, 'accelerate')">
+      <div class="menu-card" id="card-accelerate">
         <div class="icon">⚡</div>
         <h2>С ускорением</h2>
         <p>Стены телепортируют, но с каждым куском змейка становится всё быстрее.</p>
       </div>
-      <div class="menu-card" onclick="handleCardClick(this, 'immortal')">
+      <div class="menu-card" id="card-immortal">
         <div class="icon">♾️</div>
         <h2>Бессмертная</h2>
         <p>Нельзя умереть — при столкновении счёт сбрасывается, змея начинает заново.</p>
       </div>
       <!-- Скрытая карточка для мема -->
-      <div class="menu-card hidden-meme" onclick="openMemeMode()" style="display:none;">
+      <div class="menu-card hidden-meme" id="card-meme" style="display:none;">
         <div class="icon">😎</div>
         <h2>Мемный режим</h2>
         <p>Только для избранных. Тут всё по-другому.</p>
@@ -302,15 +303,32 @@
       meme:       { title: '😎 Мемный режим',         desc: 'Пицца вместо яблок, змея в очках, фон мигает.' }
     };
 
-    // Логика тройного клика для открытия мем-режима
+    // Логика тройного клика
+    const clickTimers = {};
     const clickCounts = {};
-    function handleCardClick(card, mode) {
-      if (!clickCounts[mode]) clickCounts[mode] = 0;
-      clickCounts[mode]++;
-      
-      // Визуальный эффект тройного клика
-      card.classList.add('triple-click');
-      setTimeout(() => card.classList.remove('triple-click'), 200);
 
-      if (clickCounts[mode] >= 3) {
-        // Показываем мем-карточку
+    function setupCard(id, mode) {
+      const card = document.getElementById(id);
+      card.addEventListener('click', () => {
+        const now = Date.now();
+        const threshold = 400; // мс — если между кликами меньше этого, считаем частью тройного
+
+        if (!clickCounts[mode]) clickCounts[mode] = 0;
+        if (!clickTimers[mode]) clickTimers[mode] = null;
+
+        // Если был таймер — значит, это серия кликов
+        if (clickTimers[mode] !== null && (now - clickTimers[mode]) < threshold) {
+          clickCounts[mode]++;
+        } else {
+          // Иначе начинаем новую серию
+          clickCounts[mode] = 1;
+        }
+
+        clickTimers[mode] = now;
+
+        // Визуальный эффект
+        card.classList.add('triple-click');
+        setTimeout(() => card.classList.remove('triple-click'), 200);
+
+        // Проверка на тройной клик
+        if (clickCounts[mode] >= 3) {
