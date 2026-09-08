@@ -10,7 +10,7 @@ body { font-family:'Segoe UI',Arial,sans-serif; background:linear-gradient(135de
 #menu { text-align:center; max-width:900px; width:100%; padding:40px 20px; animation:fadeIn .5s ease; z-index:10; position:relative; }
 #menu h1 { font-size:3rem; margin-bottom:8px; background:linear-gradient(135deg,#00f260,#0575e6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; text-shadow:0 0 30px rgba(0,242,96,.3); }
 #menu .subtitle { font-size:1.1rem; color:#888; margin-bottom:30px; }
-.menu-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; }
+.menu-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:24px; }
 @media (max-width:700px){ .menu-grid{ grid-template-columns:1fr; } }
 .menu-card { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); border-radius:18px; padding:30px 24px; cursor:pointer; transition:all .3s ease; text-align:center; user-select:none; -webkit-user-select:none; }
 .menu-card:hover { background:rgba(255,255,255,.12); transform:translateY(-6px); box-shadow:0 12px 40px rgba(0,0,0,.4); border-color:rgba(0,242,96,.4); }
@@ -116,11 +116,6 @@ canvas { display:block; background:#0a0a12; border-radius:14px; touch-action:non
       <div class="icon">💣</div>
       <h2>Сапёр</h2>
       <p>Мины на поле! Ешь еду, не задевая их.</p>
-    </div>
-    <div class="menu-card" data-mode="immortal">
-      <div class="icon">♾️</div>
-      <h2>Бессмертная</h2>
-      <p>При столкновении счёт сбрасывается, змея начинает заново.</p>
     </div>
   </div>
 </div>
@@ -244,9 +239,6 @@ canvas { display:block; background:#0a0a12; border-radius:14px; touch-action:non
 </div>
 
 <script>
-// ============================================================
-//  ИНИЦИАЛИЗАЦИЯ
-// ============================================================
 var canvas = document.getElementById('canvas');
 var ctx = canvas.getContext('2d', { alpha: false });
 
@@ -261,7 +253,6 @@ var pendingDx = 0, pendingDy = 0;
 var mines = [];
 var mineCount = 0;
 
-// DOM-кэш
 var elScore = document.getElementById('score');
 var elBest = document.getElementById('best');
 var elNewRecord = document.getElementById('new-record');
@@ -273,44 +264,28 @@ var elMenu = document.getElementById('menu');
 var elGameTitle = document.getElementById('game-title');
 var elGameDesc = document.getElementById('game-desc');
 
-// ============================================================
-//  ТАЙМИНГ И ПЛАВНОСТЬ
-// ============================================================
-var stepInterval = 300;       // мс на логический шаг
-var lastStepTime = 0;         // когда был последний шаг
+var stepInterval = 300;
+var lastStepTime = 0;
 var rafId = null;
 
-// Две копии позиций: «откуда» и «куда» — между ними интерполяция
-var renderSnake = [];   // текущие отрисовочные позиции (float)
-var prevSnake = [];     // позиции до шага (для интерполяции)
-var targetSnake = [];   // позиции после шага (куда едем)
-var justGrew = false;   // росла ли змейка на этом шаге
+var renderSnake = [];
+var prevSnake = [];
+var targetSnake = [];
+var justGrew = false;
 
-// ============================================================
-//  НАСТРОЙКИ
-// ============================================================
 var DEFAULT_SETTINGS = {
   theme: 'normal', control: 'buttons', grid: 10, food: 'apple',
   snakeColor: 'default', customColor: null, neon: false, rainbow: false
 };
-function loadSettings() {
-  try { var s = JSON.parse(localStorage.getItem('snake_settings')); if (s) return Object.assign({}, DEFAULT_SETTINGS, s); } catch(e) {}
-  return Object.assign({}, DEFAULT_SETTINGS);
-}
+function loadSettings() { try { var s = JSON.parse(localStorage.getItem('snake_settings')); if (s) return Object.assign({}, DEFAULT_SETTINGS, s); } catch(e) {} return Object.assign({}, DEFAULT_SETTINGS); }
 function saveSettings() { try { localStorage.setItem('snake_settings', JSON.stringify(settings)); } catch(e) {} }
 var settings = loadSettings();
 
-// ============================================================
-//  СТАТИСТИКА
-// ============================================================
 function loadStats() { try { var s = JSON.parse(localStorage.getItem('snake_stats')); if (s) return s; } catch(e) {} return { games:0, best:0, totalScore:0 }; }
 function saveStats() { try { localStorage.setItem('snake_stats', JSON.stringify(stats)); } catch(e) {} }
 var stats = loadStats();
 function getAvgScore() { return stats.games > 0 ? Math.round(stats.totalScore / stats.games) : 0; }
 
-// ============================================================
-//  КОСМЕТИКА
-// ============================================================
 var cosmetics = [
   { id:'crown', name:'👑 Корона', unlockScore:20, unlocked:false },
   { id:'horns', name:'🐂 Рога', unlockScore:40, unlocked:false },
@@ -318,19 +293,11 @@ var cosmetics = [
   { id:'star', name:'⭐ Звезда', unlockScore:80, unlocked:false },
   { id:'fire', name:'🔥 Огненный хвост', unlockScore:100, unlocked:false }
 ];
-function loadCosmetics() {
-  try { var saved = JSON.parse(localStorage.getItem('snake_cosmetics')); if (saved && Array.isArray(saved)) { cosmetics.forEach(function(c){ var f = saved.find(function(s){ return s.id===c.id; }); if (f) c.unlocked = f.unlocked; }); } } catch(e) {}
-}
+function loadCosmetics() { try { var saved = JSON.parse(localStorage.getItem('snake_cosmetics')); if (saved && Array.isArray(saved)) { cosmetics.forEach(function(c){ var f = saved.find(function(s){ return s.id===c.id; }); if (f) c.unlocked = f.unlocked; }); } } catch(e) {} }
 function saveCosmetics() { try { localStorage.setItem('snake_cosmetics', JSON.stringify(cosmetics.map(function(c){ return {id:c.id,unlocked:c.unlocked}; }))); } catch(e) {} }
-function checkUnlocks(finalScore) {
-  var n = []; cosmetics.forEach(function(c){ if (!c.unlocked && finalScore >= c.unlockScore) { c.unlocked = true; n.push(c); } });
-  if (n.length > 0) saveCosmetics(); return n;
-}
+function checkUnlocks(finalScore) { var n = []; cosmetics.forEach(function(c){ if (!c.unlocked && finalScore >= c.unlockScore) { c.unlocked = true; n.push(c); } }); if (n.length > 0) saveCosmetics(); return n; }
 loadCosmetics();
 
-// ============================================================
-//  ПРОМОКОДЫ
-// ============================================================
 var promoCodes = {
   'RGB':       { reward:'customColor', desc:'🎨 Палитра RGB разблокирована! Выбирай любой цвет.' },
   'TMYVDENEG': { reward:'sponsorGold', desc:'💰 Спонсорский золотой цвет разблокирован!' },
@@ -342,11 +309,7 @@ function loadRedeemedCodes() { try { return JSON.parse(localStorage.getItem('sna
 function saveRedeemedCodes() { try { localStorage.setItem('snake_promos', JSON.stringify(redeemedCodes)); } catch(e) {} }
 var redeemedCodes = loadRedeemedCodes();
 
-function showToast(msg, isError) {
-  var t = document.getElementById('toast');
-  t.textContent = msg; t.className = 'toast' + (isError ? ' error' : ''); t.classList.add('show');
-  setTimeout(function(){ t.classList.remove('show'); }, 3000);
-}
+function showToast(msg, isError) { var t = document.getElementById('toast'); t.textContent = msg; t.className = 'toast' + (isError ? ' error' : ''); t.classList.add('show'); setTimeout(function(){ t.classList.remove('show'); }, 3000); }
 function redeemPromo() {
   var input = document.getElementById('promo-input'); var code = input.value.trim().toUpperCase();
   if (!code) { showToast('Введите промокод', true); return; }
@@ -362,16 +325,14 @@ function redeemPromo() {
 }
 function createCustomColorInput() {
   if (document.getElementById('custom-color-wrap')) return;
-  var row = document.getElementById('color-row'); var wrap = document.createElement('div');
-  wrap.className = 'custom-color-wrap'; wrap.id = 'custom-color-wrap';
+  var row = document.getElementById('color-row'); var wrap = document.createElement('div'); wrap.className = 'custom-color-wrap'; wrap.id = 'custom-color-wrap';
   var inp = document.createElement('input'); inp.type = 'color'; inp.id = 'custom-color-input'; inp.value = settings.customColor || '#00ff00';
   var lbl = document.createElement('span'); lbl.textContent = 'Свой'; wrap.appendChild(inp); wrap.appendChild(lbl); row.appendChild(wrap);
   inp.addEventListener('input', function(){ settings.snakeColor = 'custom'; settings.customColor = this.value; saveSettings(); snakeColorCache = {}; document.querySelectorAll('.color-swatch').forEach(function(s){ s.classList.remove('active'); }); });
 }
 function createSponsorSwatch() {
   if (document.getElementById('sponsor-swatch')) return;
-  var row = document.getElementById('color-row'); var sw = document.createElement('div');
-  sw.className = 'color-swatch'; sw.id = 'sponsor-swatch'; sw.dataset.colorId = 'sponsor';
+  var row = document.getElementById('color-row'); var sw = document.createElement('div'); sw.className = 'color-swatch'; sw.id = 'sponsor-swatch'; sw.dataset.colorId = 'sponsor';
   sw.style.background = 'linear-gradient(135deg,#ffd700,#b8860b)'; sw.title = 'Спонсор Gold';
   sw.addEventListener('click', function(){ settings.snakeColor = 'sponsor'; saveSettings(); snakeColorCache = {}; document.querySelectorAll('.color-swatch').forEach(function(s){ s.classList.remove('active'); }); sw.classList.add('active'); });
   row.appendChild(sw);
@@ -389,9 +350,6 @@ function applyRedeemedRewards() {
   });
 }
 
-// ============================================================
-//  ЦВЕТА
-// ============================================================
 var snakeColors = [
   { id:'default', name:'По умолчанию', head:'#00f260', tail:'#0575e6', glow:'#00f260' },
   { id:'red',     name:'Красная',      head:'#ff4757', tail:'#c0392b', glow:'#ff4757' },
@@ -431,14 +389,11 @@ function getSnakeColorsRaw() {
   return snakeColors[0];
 }
 function getThemeColors() {
-  if (settings.theme === 'bw') return { bg:'#000000' };
-  if (settings.theme === 'invert') return { bg:'#f0f0f0' };
-  return { bg:'#0a0a12' };
+  if (settings.theme === 'bw') return { bg:'#000000', grid:'rgba(255,255,255,0.04)' };
+  if (settings.theme === 'invert') return { bg:'#f0f0f0', grid:'rgba(0,0,0,0.06)' };
+  return { bg:'#0a0a12', grid:'rgba(255,255,255,0.03)' };
 }
 
-// ============================================================
-//  UI
-// ============================================================
 function toggleSettings(){ document.getElementById('settings-panel').classList.toggle('show'); }
 function toggleProfile(){ updateProfileUI(); document.getElementById('profile-panel').classList.toggle('show'); }
 function updateProfileUI() {
@@ -473,9 +428,6 @@ document.getElementById('promo-input').addEventListener('keydown', function(e){ 
 function applyControlSetting() { var tc = document.getElementById('touch-controls'); tc.style.display = (window.innerWidth <= 768 && settings.control === 'buttons') ? 'block' : 'none'; }
 window.addEventListener('resize', applyControlSetting);
 
-// ============================================================
-//  ПОЛЕ
-// ============================================================
 function setupGrid() { var g = settings.grid; TILE = Math.floor(CANVAS_SIZE / g); GRID_W = g; GRID_H = g; canvas.width = TILE * GRID_W; canvas.height = TILE * GRID_H; }
 function randomStart() {
   var horizontal = Math.random() < 0.5; var dir = Math.random() < 0.5 ? 1 : -1; var s = []; var startVal, crossVal;
@@ -486,8 +438,7 @@ function randomStart() {
 var memePhrases = ["Опять не хватило 1 кусочка 😔","Змея сказала: «Я так не играю» 🐍","Даже кот бы сыграл лучше 🐱","Стена победила. Стена всегда побеждает 🧱","Это не твоя вина. Это баг в матрице 💊","Попробуй ещё раз!","Красиво умер 😎","БУМ! Мин сработала 💥"];
 var modeInfo = {
   classic:  { title:'🎯 Классическая змейка', desc:'Стены и хвост убивают. Набери максимум!' },
-  mines:    { title:'💣 Змейка-сапёр',         desc:'Мины на поле! Ешь еду, не задевая их.' },
-  immortal: { title:'♾️ Бессмертная змейка',   desc:'При столкновении — сброс очков и заново.' }
+  mines:    { title:'💣 Змейка-сапёр',         desc:'Мины на поле! Ешь еду, не задевая их.' }
 };
 var cardData = {};
 document.querySelectorAll('.menu-card').forEach(function(card){
@@ -507,13 +458,9 @@ function openGame(mode) {
 function backToMenu() { stopGame(); elGameScreen.style.display = 'none'; elMenu.style.display = 'block'; }
 function restartCurrent() { initGame(); showOverlay('Нажми любую стрелку', '', true); }
 
-// ============================================================
-//  ИНИЦИАЛИЗАЦИЯ ИГРЫ
-// ============================================================
 function initGame() {
   stopGame(); setupGrid();
   snake = randomStart();
-  // Копируем позиции для рендера (float-координаты)
   renderSnake = snake.map(function(s){ return { x: s.x, y: s.y }; });
   prevSnake = snake.map(function(s){ return { x: s.x, y: s.y }; });
   targetSnake = snake.map(function(s){ return { x: s.x, y: s.y }; });
@@ -545,13 +492,18 @@ function updateScore() { elScore.textContent = score; }
 function showOverlay(title, text, green) { elOverlay.classList.remove('hidden'); elOverlayTitle.textContent = title; elOverlayTitle.style.color = green ? '#00f260' : '#ff4757'; elOverlayText.textContent = text; }
 function hideOverlay() { elOverlay.classList.add('hidden'); }
 
-// ============================================================
-//  ОТРИСОВКА — БЕЗ СЕТКИ, ПЛАВНЫЕ FLOAT-КООРДИНАТЫ
-// ============================================================
 function draw() {
   var tc = getThemeColors();
   ctx.fillStyle = tc.bg;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Минимальная сетка — одним beginPath
+  ctx.beginPath();
+  for (var i = 0; i <= GRID_W; i++) { ctx.moveTo(i*TILE+0.5, 0); ctx.lineTo(i*TILE+0.5, canvas.height); }
+  for (var j = 0; j <= GRID_H; j++) { ctx.moveTo(0, j*TILE+0.5); ctx.lineTo(canvas.width, j*TILE+0.5); }
+  ctx.strokeStyle = tc.grid; ctx.lineWidth = 1;
+  ctx.stroke();
+
   drawMines();
   drawFood();
   drawSnake();
@@ -608,9 +560,6 @@ function drawFood() {
   }
 }
 
-// ============================================================
-//  ОТРИСОВКА ЗМЕЙКИ — ПЛАВНЫЕ FLOAT-КООРДИНАТЫ
-// ============================================================
 function drawSnake() {
   ctx.shadowBlur = 0;
   var sc = getCachedSnakeColors();
@@ -675,11 +624,7 @@ function drawEyes(x, y) {
 
 function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x+r, y); ctx.arcTo(x+w, y, x+w, y+h, r); ctx.arcTo(x+w, y+h, x, y+h, r); ctx.arcTo(x, y+h, x, y, r); ctx.arcTo(x, y, x+w, y, r); ctx.closePath(); }
 
-// ============================================================
-//  ЛОГИКА — ОБНОВЛЕНИЕ ЛОГИЧЕСКИХ ПОЗИЦИЙ
-// ============================================================
 function update() {
-  // Сохраняем текущие позиции как «откуда»
   prevSnake = snake.map(function(s){ return { x: s.x, y: s.y }; });
 
   dx = pendingDx; dy = pendingDy;
@@ -691,14 +636,6 @@ function update() {
     if (head.x < 0) head.x = GRID_W-1; if (head.x >= GRID_W) head.x = 0;
     if (head.y < 0) head.y = GRID_H-1; if (head.y >= GRID_H) head.y = 0;
     if (checkSelfCollision(head) || checkMineCollision(head)) { gameOver(); return; }
-  } else if (currentMode === 'immortal') {
-    if (head.x < 0 || head.x >= GRID_W || head.y < 0 || head.y >= GRID_H || checkSelfCollision(head)) {
-      score = 0; updateScore(); snake = randomStart();
-      prevSnake = snake.map(function(s){ return { x: s.x, y: s.y }; });
-      renderSnake = snake.map(function(s){ return { x: s.x, y: s.y }; });
-      dx = 0; dy = 0; pendingDx = 0; pendingDy = 0; placeFood(); gameRunning = false;
-      showOverlay('Ой! Сброс очков', 'Нажми стрелку, чтобы продолжить', true); return;
-    }
   }
 
   snake.unshift(head);
@@ -707,12 +644,9 @@ function update() {
     if (currentMode === 'mines') addMine();
   } else { snake.pop(); justGrew = false; }
 
-  // Обновляем targetSnake — куда едем
   targetSnake = snake.map(function(s){ return { x: s.x, y: s.y }; });
 
-  // Если змейка выросла, добавляем новый сегмент в prevSnake (он появится плавно)
   if (justGrew && targetSnake.length > prevSnake.length) {
-    // Новый хвостовой сегмент: его «откуда» = текущий хвост (стоит на месте)
     var lastTarget = targetSnake[targetSnake.length - 1];
     prevSnake.push({ x: lastTarget.x, y: lastTarget.y });
   }
@@ -734,14 +668,6 @@ function gameOver() {
   score = 0; updateScore(); isGameOver = true;
 }
 
-// ============================================================
-//  ГЛАВНЫЙ ЦИКЛ — requestAnimationFrame + ИНТЕРПОЛЯЦИЯ
-// ============================================================
-//  Логика шагает каждые 300 мс.
-//  Между шагами renderSnake плавно интерполируется
-//  от prevSnake к targetSnake — змейка скользит без рывков.
-//  Отрисовка на частоте экрана (60/90/120 FPS).
-// ============================================================
 function gameLoop(timestamp) {
   if (!gameRunning) return;
 
@@ -749,7 +675,6 @@ function gameLoop(timestamp) {
   var progress = elapsed / stepInterval;
   if (progress > 1) progress = 1;
 
-  // Интерполяция: плавно двигаем renderSnake от prev к target
   var len = renderSnake.length;
   var tLen = targetSnake.length;
   for (var i = 0; i < len; i++) {
@@ -762,11 +687,9 @@ function gameLoop(timestamp) {
     }
   }
 
-  // Время шагать
   if (elapsed >= stepInterval) {
     lastStepTime = timestamp;
     update();
-    // Синхронизируем renderSnake с новым размером
     if (renderSnake.length !== targetSnake.length) {
       renderSnake = targetSnake.map(function(s){ return { x: s.x, y: s.y }; });
     }
@@ -784,9 +707,6 @@ function startLoop() {
   rafId = requestAnimationFrame(gameLoop);
 }
 
-// ============================================================
-//  УПРАВЛЕНИЕ
-// ============================================================
 function handleDirection(ndx, ndy) {
   if (!currentMode || elGameScreen.style.display === 'none') return;
   if (isGameOver) { initGame(); }
