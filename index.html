@@ -239,6 +239,9 @@ canvas { display:block; background:#0a0a12; border-radius:14px; touch-action:non
 </div>
 
 <script>
+// ============================================================
+//  ИНИЦИАЛИЗАЦИЯ
+// ============================================================
 var canvas = document.getElementById('canvas');
 var ctx = canvas.getContext('2d', { alpha: false });
 
@@ -253,6 +256,7 @@ var pendingDx = 0, pendingDy = 0;
 var mines = [];
 var mineCount = 0;
 
+// DOM-кэш
 var elScore = document.getElementById('score');
 var elBest = document.getElementById('best');
 var elNewRecord = document.getElementById('new-record');
@@ -264,6 +268,9 @@ var elMenu = document.getElementById('menu');
 var elGameTitle = document.getElementById('game-title');
 var elGameDesc = document.getElementById('game-desc');
 
+// ============================================================
+//  ТАЙМИНГ И ПЛАВНОСТЬ
+// ============================================================
 var stepInterval = 300;
 var lastStepTime = 0;
 var rafId = null;
@@ -273,19 +280,31 @@ var prevSnake = [];
 var targetSnake = [];
 var justGrew = false;
 
+// ============================================================
+//  НАСТРОЙКИ
+// ============================================================
 var DEFAULT_SETTINGS = {
   theme: 'normal', control: 'buttons', grid: 10, food: 'apple',
   snakeColor: 'default', customColor: null, neon: false, rainbow: false
 };
-function loadSettings() { try { var s = JSON.parse(localStorage.getItem('snake_settings')); if (s) return Object.assign({}, DEFAULT_SETTINGS, s); } catch(e) {} return Object.assign({}, DEFAULT_SETTINGS); }
+function loadSettings() {
+  try { var s = JSON.parse(localStorage.getItem('snake_settings')); if (s) return Object.assign({}, DEFAULT_SETTINGS, s); } catch(e) {}
+  return Object.assign({}, DEFAULT_SETTINGS);
+}
 function saveSettings() { try { localStorage.setItem('snake_settings', JSON.stringify(settings)); } catch(e) {} }
 var settings = loadSettings();
 
+// ============================================================
+//  СТАТИСТИКА
+// ============================================================
 function loadStats() { try { var s = JSON.parse(localStorage.getItem('snake_stats')); if (s) return s; } catch(e) {} return { games:0, best:0, totalScore:0 }; }
 function saveStats() { try { localStorage.setItem('snake_stats', JSON.stringify(stats)); } catch(e) {} }
 var stats = loadStats();
 function getAvgScore() { return stats.games > 0 ? Math.round(stats.totalScore / stats.games) : 0; }
 
+// ============================================================
+//  КОСМЕТИКА
+// ============================================================
 var cosmetics = [
   { id:'crown', name:'👑 Корона', unlockScore:20, unlocked:false },
   { id:'horns', name:'🐂 Рога', unlockScore:40, unlocked:false },
@@ -293,11 +312,19 @@ var cosmetics = [
   { id:'star', name:'⭐ Звезда', unlockScore:80, unlocked:false },
   { id:'fire', name:'🔥 Огненный хвост', unlockScore:100, unlocked:false }
 ];
-function loadCosmetics() { try { var saved = JSON.parse(localStorage.getItem('snake_cosmetics')); if (saved && Array.isArray(saved)) { cosmetics.forEach(function(c){ var f = saved.find(function(s){ return s.id===c.id; }); if (f) c.unlocked = f.unlocked; }); } } catch(e) {} }
+function loadCosmetics() {
+  try { var saved = JSON.parse(localStorage.getItem('snake_cosmetics')); if (saved && Array.isArray(saved)) { cosmetics.forEach(function(c){ var f = saved.find(function(s){ return s.id===c.id; }); if (f) c.unlocked = f.unlocked; }); } } catch(e) {}
+}
 function saveCosmetics() { try { localStorage.setItem('snake_cosmetics', JSON.stringify(cosmetics.map(function(c){ return {id:c.id,unlocked:c.unlocked}; }))); } catch(e) {} }
-function checkUnlocks(finalScore) { var n = []; cosmetics.forEach(function(c){ if (!c.unlocked && finalScore >= c.unlockScore) { c.unlocked = true; n.push(c); } }); if (n.length > 0) saveCosmetics(); return n; }
+function checkUnlocks(finalScore) {
+  var n = []; cosmetics.forEach(function(c){ if (!c.unlocked && finalScore >= c.unlockScore) { c.unlocked = true; n.push(c); } });
+  if (n.length > 0) saveCosmetics(); return n;
+}
 loadCosmetics();
 
+// ============================================================
+//  ПРОМОКОДЫ
+// ============================================================
 var promoCodes = {
   'RGB':       { reward:'customColor', desc:'🎨 Палитра RGB разблокирована! Выбирай любой цвет.' },
   'TMYVDENEG': { reward:'sponsorGold', desc:'💰 Спонсорский золотой цвет разблокирован!' },
@@ -309,7 +336,11 @@ function loadRedeemedCodes() { try { return JSON.parse(localStorage.getItem('sna
 function saveRedeemedCodes() { try { localStorage.setItem('snake_promos', JSON.stringify(redeemedCodes)); } catch(e) {} }
 var redeemedCodes = loadRedeemedCodes();
 
-function showToast(msg, isError) { var t = document.getElementById('toast'); t.textContent = msg; t.className = 'toast' + (isError ? ' error' : ''); t.classList.add('show'); setTimeout(function(){ t.classList.remove('show'); }, 3000); }
+function showToast(msg, isError) {
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast' + (isError ? ' error' : ''); t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 3000);
+}
 function redeemPromo() {
   var input = document.getElementById('promo-input'); var code = input.value.trim().toUpperCase();
   if (!code) { showToast('Введите промокод', true); return; }
@@ -325,31 +356,62 @@ function redeemPromo() {
 }
 function createCustomColorInput() {
   if (document.getElementById('custom-color-wrap')) return;
-  var row = document.getElementById('color-row'); var wrap = document.createElement('div'); wrap.className = 'custom-color-wrap'; wrap.id = 'custom-color-wrap';
-  var inp = document.createElement('input'); inp.type = 'color'; inp.id = 'custom-color-input'; inp.value = settings.customColor || '#00ff00';
-  var lbl = document.createElement('span'); lbl.textContent = 'Свой'; wrap.appendChild(inp); wrap.appendChild(lbl); row.appendChild(wrap);
-  inp.addEventListener('input', function(){ settings.snakeColor = 'custom'; settings.customColor = this.value; saveSettings(); snakeColorCache = {}; document.querySelectorAll('.color-swatch').forEach(function(s){ s.classList.remove('active'); }); });
+  var row = document.getElementById('color-row');
+  var wrap = document.createElement('div');
+  wrap.className = 'custom-color-wrap'; wrap.id = 'custom-color-wrap';
+  var inp = document.createElement('input');
+  inp.type = 'color'; inp.id = 'custom-color-input';
+  inp.value = settings.customColor || '#00ff00';
+  var lbl = document.createElement('span'); lbl.textContent = 'Свой';
+  wrap.appendChild(inp); wrap.appendChild(lbl); row.appendChild(wrap);
+  inp.addEventListener('input', function(){
+    settings.snakeColor = 'custom'; settings.customColor = this.value; saveSettings();
+    snakeColorCache = {};
+    document.querySelectorAll('.color-swatch').forEach(function(s){ s.classList.remove('active'); });
+  });
 }
 function createSponsorSwatch() {
   if (document.getElementById('sponsor-swatch')) return;
-  var row = document.getElementById('color-row'); var sw = document.createElement('div'); sw.className = 'color-swatch'; sw.id = 'sponsor-swatch'; sw.dataset.colorId = 'sponsor';
+  var row = document.getElementById('color-row'); var sw = document.createElement('div');
+  sw.className = 'color-swatch'; sw.id = 'sponsor-swatch'; sw.dataset.colorId = 'sponsor';
   sw.style.background = 'linear-gradient(135deg,#ffd700,#b8860b)'; sw.title = 'Спонсор Gold';
-  sw.addEventListener('click', function(){ settings.snakeColor = 'sponsor'; saveSettings(); snakeColorCache = {}; document.querySelectorAll('.color-swatch').forEach(function(s){ s.classList.remove('active'); }); sw.classList.add('active'); });
+  sw.addEventListener('click', function(){
+    settings.snakeColor = 'sponsor'; saveSettings(); snakeColorCache = {};
+    document.querySelectorAll('.color-swatch').forEach(function(s){ s.classList.remove('active'); });
+    sw.classList.add('active');
+  });
   row.appendChild(sw);
 }
-function toggleNeon() { settings.neon = !settings.neon; saveSettings(); var btn = document.getElementById('neon-toggle'); btn.classList.toggle('active'); btn.textContent = settings.neon ? 'Включён ✨' : 'Включить'; }
-function toggleRainbow() { settings.rainbow = !settings.rainbow; saveSettings(); var btn = document.getElementById('rainbow-toggle'); btn.classList.toggle('active'); btn.textContent = settings.rainbow ? 'Включён 🌈' : 'Включить'; }
+function toggleNeon() {
+  settings.neon = !settings.neon; saveSettings();
+  var btn = document.getElementById('neon-toggle'); btn.classList.toggle('active');
+  btn.textContent = settings.neon ? 'Включён ✨' : 'Включить';
+}
+function toggleRainbow() {
+  settings.rainbow = !settings.rainbow; saveSettings();
+  var btn = document.getElementById('rainbow-toggle'); btn.classList.toggle('active');
+  btn.textContent = settings.rainbow ? 'Включён 🌈' : 'Включить';
+}
 function applyRedeemedRewards() {
   redeemedCodes.forEach(function(code){
     var promo = promoCodes[code]; if (!promo) return;
     if (promo.reward === 'customColor') createCustomColorInput();
     else if (promo.reward === 'sponsorGold') createSponsorSwatch();
     else if (promo.reward === 'allCosmetics') { cosmetics.forEach(function(c){ c.unlocked = true; }); saveCosmetics(); }
-    else if (promo.reward === 'neon') { document.getElementById('neon-group').style.display = 'block'; if (settings.neon) { var b = document.getElementById('neon-toggle'); b.classList.add('active'); b.textContent = 'Включён ✨'; } }
-    else if (promo.reward === 'rainbow') { document.getElementById('rainbow-group').style.display = 'block'; if (settings.rainbow) { var b2 = document.getElementById('rainbow-toggle'); b2.classList.add('active'); b2.textContent = 'Включён 🌈'; } }
+    else if (promo.reward === 'neon') {
+      document.getElementById('neon-group').style.display = 'block';
+      if (settings.neon) { var b = document.getElementById('neon-toggle'); b.classList.add('active'); b.textContent = 'Включён ✨'; }
+    }
+    else if (promo.reward === 'rainbow') {
+      document.getElementById('rainbow-group').style.display = 'block';
+      if (settings.rainbow) { var b2 = document.getElementById('rainbow-toggle'); b2.classList.add('active'); b2.textContent = 'Включён 🌈'; }
+    }
   });
 }
 
+// ============================================================
+//  ЦВЕТА ЗМЕЙКИ
+// ============================================================
 var snakeColors = [
   { id:'default', name:'По умолчанию', head:'#00f260', tail:'#0575e6', glow:'#00f260' },
   { id:'red',     name:'Красная',      head:'#ff4757', tail:'#c0392b', glow:'#ff4757' },
@@ -363,15 +425,24 @@ var snakeColors = [
 (function(){
   var row = document.getElementById('color-row');
   snakeColors.forEach(function(c){
-    var sw = document.createElement('div'); sw.className = 'color-swatch'; sw.dataset.colorId = c.id;
-    sw.style.background = 'linear-gradient(135deg,' + c.head + ',' + c.tail + ')'; sw.title = c.name;
+    var sw = document.createElement('div');
+    sw.className = 'color-swatch'; sw.dataset.colorId = c.id;
+    sw.style.background = 'linear-gradient(135deg,' + c.head + ',' + c.tail + ')';
+    sw.title = c.name;
     if (c.id === settings.snakeColor) sw.classList.add('active');
-    sw.addEventListener('click', function(){ settings.snakeColor = c.id; saveSettings(); snakeColorCache = {}; document.querySelectorAll('.color-swatch').forEach(function(s){ s.classList.remove('active'); }); sw.classList.add('active'); });
+    sw.addEventListener('click', function(){
+      settings.snakeColor = c.id; saveSettings(); snakeColorCache = {};
+      document.querySelectorAll('.color-swatch').forEach(function(s){ s.classList.remove('active'); });
+      sw.classList.add('active');
+    });
     row.appendChild(sw);
   });
 })();
 function rgbToHex(r,g,b){ return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1); }
-function hexToRgb(hex){ var r=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex); return r?{r:parseInt(r[1],16),g:parseInt(r[2],16),b:parseInt(r[3],16)}:{r:255,g:255,b:255}; }
+function hexToRgb(hex){
+  var r=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return r?{r:parseInt(r[1],16),g:parseInt(r[2],16),b:parseInt(r[3],16)}:{r:255,g:255,b:255};
+}
 
 var snakeColorCache = {};
 function getCachedSnakeColors() {
@@ -384,7 +455,9 @@ function getSnakeColorsRaw() {
     var c = hexToRgb(settings.customColor);
     return { head: settings.customColor, tail: rgbToHex(Math.round(c.r*0.6),Math.round(c.g*0.6),Math.round(c.b*0.6)), glow: settings.customColor };
   }
-  if (settings.snakeColor === 'sponsor' && redeemedCodes.indexOf('TMYVDENEG') !== -1) { return { head:'#ffd700', tail:'#b8860b', glow:'#ffd700' }; }
+  if (settings.snakeColor === 'sponsor' && redeemedCodes.indexOf('TMYVDENEG') !== -1) {
+    return { head:'#ffd700', tail:'#b8860b', glow:'#ffd700' };
+  }
   for (var i = 0; i < snakeColors.length; i++) { if (snakeColors[i].id === settings.snakeColor) return snakeColors[i]; }
   return snakeColors[0];
 }
@@ -394,6 +467,9 @@ function getThemeColors() {
   return { bg:'#0a0a12', grid:'rgba(255,255,255,0.03)' };
 }
 
+// ============================================================
+//  UI
+// ============================================================
 function toggleSettings(){ document.getElementById('settings-panel').classList.toggle('show'); }
 function toggleProfile(){ updateProfileUI(); document.getElementById('profile-panel').classList.toggle('show'); }
 function updateProfileUI() {
@@ -402,15 +478,30 @@ function updateProfileUI() {
   document.getElementById('stat-total').textContent = stats.totalScore;
   document.getElementById('stat-avg').textContent = getAvgScore();
   var list = document.getElementById('unlock-list'); list.innerHTML = '';
-  cosmetics.forEach(function(c){ var item = document.createElement('div'); item.className = 'unlock-item' + (c.unlocked ? ' unlocked' : ''); item.innerHTML = '<div>' + (c.unlocked ? c.name : '🔒 ' + c.name) + '</div><div class="cost">' + (c.unlocked ? '✅ Открыто' : 'Нужно: ' + c.unlockScore) + '</div>'; list.appendChild(item); });
-  var bonuses = document.getElementById('bonuses-group'); var blist = document.getElementById('bonus-list'); blist.innerHTML = ''; var hasBonuses = false;
-  redeemedCodes.forEach(function(code){ var promo = promoCodes[code]; if (!promo) return; hasBonuses = true; var badge = document.createElement('span'); badge.className = 'bonus-badge'; badge.textContent = promo.desc.split('!')[0]; blist.appendChild(badge); });
+  cosmetics.forEach(function(c){
+    var item = document.createElement('div');
+    item.className = 'unlock-item' + (c.unlocked ? ' unlocked' : '');
+    item.innerHTML = '<div>' + (c.unlocked ? c.name : '🔒 ' + c.name) + '</div><div class="cost">' + (c.unlocked ? '✅ Открыто' : 'Нужно: ' + c.unlockScore) + '</div>';
+    list.appendChild(item);
+  });
+  var bonuses = document.getElementById('bonuses-group');
+  var blist = document.getElementById('bonus-list'); blist.innerHTML = ''; var hasBonuses = false;
+  redeemedCodes.forEach(function(code){
+    var promo = promoCodes[code]; if (!promo) return;
+    hasBonuses = true;
+    var badge = document.createElement('span'); badge.className = 'bonus-badge';
+    badge.textContent = promo.desc.split('!')[0]; blist.appendChild(badge);
+  });
   bonuses.style.display = hasBonuses ? 'block' : 'none';
 }
 (function(){
   document.querySelectorAll('.settings-opt').forEach(function(opt){
-    var setting = opt.dataset.setting; var value = opt.dataset.value; var checkVal = (setting === 'grid') ? parseInt(value) : value;
-    if (settings[setting] === checkVal) { document.querySelectorAll('.settings-opt[data-setting="' + setting + '"]').forEach(function(o){ o.classList.remove('active'); }); opt.classList.add('active'); }
+    var setting = opt.dataset.setting; var value = opt.dataset.value;
+    var checkVal = (setting === 'grid') ? parseInt(value) : value;
+    if (settings[setting] === checkVal) {
+      document.querySelectorAll('.settings-opt[data-setting="' + setting + '"]').forEach(function(o){ o.classList.remove('active'); });
+      opt.classList.add('active');
+    }
   });
   applyRedeemedRewards();
 })();
@@ -418,33 +509,55 @@ document.querySelectorAll('.settings-opt').forEach(function(opt){
   opt.addEventListener('click', function(){
     var setting = opt.dataset.setting; var value = opt.dataset.value;
     settings[setting] = (setting === 'grid') ? parseInt(value) : value; saveSettings();
-    document.querySelectorAll('.settings-opt[data-setting="' + setting + '"]').forEach(function(o){ o.classList.remove('active'); }); opt.classList.add('active');
-    snakeColorCache = {};
+    document.querySelectorAll('.settings-opt[data-setting="' + setting + '"]').forEach(function(o){ o.classList.remove('active'); });
+    opt.classList.add('active'); snakeColorCache = {};
     if (setting === 'control') applyControlSetting();
     if (setting === 'grid' && currentMode) { initGame(); showOverlay('Нажми любую стрелку', '', true); }
   });
 });
 document.getElementById('promo-input').addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); redeemPromo(); } });
-function applyControlSetting() { var tc = document.getElementById('touch-controls'); tc.style.display = (window.innerWidth <= 768 && settings.control === 'buttons') ? 'block' : 'none'; }
+function applyControlSetting() {
+  var tc = document.getElementById('touch-controls');
+  tc.style.display = (window.innerWidth <= 768 && settings.control === 'buttons') ? 'block' : 'none';
+}
 window.addEventListener('resize', applyControlSetting);
 
-function setupGrid() { var g = settings.grid; TILE = Math.floor(CANVAS_SIZE / g); GRID_W = g; GRID_H = g; canvas.width = TILE * GRID_W; canvas.height = TILE * GRID_H; }
+// ============================================================
+//  ПОЛЕ
+// ============================================================
+function setupGrid() {
+  var g = settings.grid; TILE = Math.floor(CANVAS_SIZE / g); GRID_W = g; GRID_H = g;
+  canvas.width = TILE * GRID_W; canvas.height = TILE * GRID_H;
+}
 function randomStart() {
   var horizontal = Math.random() < 0.5; var dir = Math.random() < 0.5 ? 1 : -1; var s = []; var startVal, crossVal;
-  if (horizontal) { crossVal = 1 + Math.floor(Math.random() * Math.max(1, GRID_H - 2)); startVal = dir > 0 ? 2 + Math.floor(Math.random() * Math.max(1, GRID_W - 3)) : 1 + Math.floor(Math.random() * Math.max(1, GRID_W - 3)); for (var i = 0; i < 3; i++) s.push({ x: startVal - dir * i, y: crossVal }); }
-  else { crossVal = 1 + Math.floor(Math.random() * Math.max(1, GRID_W - 2)); startVal = dir > 0 ? 2 + Math.floor(Math.random() * Math.max(1, GRID_H - 3)) : 1 + Math.floor(Math.random() * Math.max(1, GRID_H - 3)); for (var j = 0; j < 3; j++) s.push({ x: crossVal, y: startVal - dir * j }); }
+  if (horizontal) {
+    crossVal = 1 + Math.floor(Math.random() * Math.max(1, GRID_H - 2));
+    startVal = dir > 0 ? 2 + Math.floor(Math.random() * Math.max(1, GRID_W - 3)) : 1 + Math.floor(Math.random() * Math.max(1, GRID_W - 3));
+    for (var i = 0; i < 3; i++) s.push({ x: startVal - dir * i, y: crossVal });
+  } else {
+    crossVal = 1 + Math.floor(Math.random() * Math.max(1, GRID_W - 2));
+    startVal = dir > 0 ? 2 + Math.floor(Math.random() * Math.max(1, GRID_H - 3)) : 1 + Math.floor(Math.random() * Math.max(1, GRID_H - 3));
+    for (var j = 0; j < 3; j++) s.push({ x: crossVal, y: startVal - dir * j });
+  }
   return s;
 }
-var memePhrases = ["Опять не хватило 1 кусочка 😔","Змея сказала: «Я так не играю» 🐍","Даже кот бы сыграл лучше 🐱","Стена победила. Стена всегда побеждает 🧱","Это не твоя вина. Это баг в матрице 💊","Попробуй ещё раз!","Красиво умер 😎","БУМ! Мин сработала 💥"];
+var memePhrases = [
+  "Опять не хватило 1 кусочка 😔","Змея сказала: «Я так не играю» 🐍",
+  "Даже кот бы сыграл лучше 🐱","Стена победила. Стена всегда побеждает 🧱",
+  "Это не твоя вина. Это баг в матрице 💊","Попробуй ещё раз!","Красиво умер 😎",
+  "БУМ! Мин сработала 💥"
+];
 var modeInfo = {
-  classic:  { title:'🎯 Классическая змейка', desc:'Стены и хвост убивают. Набери максимум!' },
-  mines:    { title:'💣 Змейка-сапёр',         desc:'Мины на поле! Ешь еду, не задевая их.' }
+  classic: { title:'🎯 Классическая змейка', desc:'Стены и хвост убивают. Набери максимум!' },
+  mines:   { title:'💣 Змейка-сапёр', desc:'Мины на поле! Ешь еду, не задевая их.' }
 };
 var cardData = {};
 document.querySelectorAll('.menu-card').forEach(function(card){
   var mode = card.dataset.mode;
   card.addEventListener('click', function(){
-    if (!cardData[mode]) cardData[mode] = { count: 0, timer: null }; var d = cardData[mode]; d.count++;
+    if (!cardData[mode]) cardData[mode] = { count: 0, timer: null };
+    var d = cardData[mode]; d.count++;
     card.classList.add('bump'); setTimeout(function(){ card.classList.remove('bump'); }, 200);
     clearTimeout(d.timer); d.timer = setTimeout(function(){ openGame(mode); d.count = 0; }, 350);
   });
@@ -458,6 +571,9 @@ function openGame(mode) {
 function backToMenu() { stopGame(); elGameScreen.style.display = 'none'; elMenu.style.display = 'block'; }
 function restartCurrent() { initGame(); showOverlay('Нажми любую стрелку', '', true); }
 
+// ============================================================
+//  ИНИЦИАЛИЗАЦИЯ ИГРЫ
+// ============================================================
 function initGame() {
   stopGame(); setupGrid();
   snake = randomStart();
@@ -471,27 +587,79 @@ function initGame() {
 }
 function stopGame() { gameRunning = false; if (rafId) { cancelAnimationFrame(rafId); rafId = null; } }
 
+// ============================================================
+//  РАЗМЕЩЕНИЕ ЕДЫ — ГАРАНТИРОВАННЫЙ АЛГОРИТМ
+//  Собираем все свободные клетки и выбираем случайную.
+//  Еда больше НИКОГДА не исчезнет, даже при длинной змейке.
+// ============================================================
 function placeFood() {
-  var tries = 0;
-  do { food = { x: Math.floor(Math.random()*GRID_W), y: Math.floor(Math.random()*GRID_H) }; tries++; }
-  while ((snake.some(function(s){ return s.x===food.x && s.y===food.y; }) || (currentMode === 'mines' && mines.some(function(m){ return m.x===food.x && m.y===food.y; }))) && tries < 200);
-}
-function placeMines() {
-  mines = []; var totalCells = GRID_W * GRID_H; mineCount = Math.max(3, Math.floor(totalCells * 0.15));
-  for (var i = 0; i < mineCount; i++) { var valid = false, mine = { x:0, y:0 }, attempts = 0;
-    while (!valid && attempts < 200) { mine.x = Math.floor(Math.random()*GRID_W); mine.y = Math.floor(Math.random()*GRID_H); valid = !snake.some(function(s){ return s.x===mine.x && s.y===mine.y; }) && !mines.some(function(m){ return m.x===mine.x && m.y===mine.y; }); attempts++; }
-    if (valid) mines.push(mine);
+  // Создаём карту занятых клеток
+  var occupied = {};
+  // Змейка
+  for (var i = 0; i < snake.length; i++) {
+    occupied[snake[i].x + ',' + snake[i].y] = true;
+  }
+  // Мины (режим сапёра)
+  if (currentMode === 'mines') {
+    for (var j = 0; j < mines.length; j++) {
+      occupied[mines[j].x + ',' + mines[j].y] = true;
+    }
+  }
+  // Собираем свободные клетки
+  var free = [];
+  for (var x = 0; x < GRID_W; x++) {
+    for (var y = 0; y < GRID_H; y++) {
+      if (!occupied[x + ',' + y]) free.push({ x: x, y: y });
+    }
+  }
+  // Если есть свободные клетки — выбираем случайную
+  if (free.length > 0) {
+    food = free[Math.floor(Math.random() * free.length)];
+  } else {
+    // Поле заполнено — победа!
+    food = null;
+    gameOver(true);
   }
 }
-function addMine() {
-  var valid = false, mine = { x:0, y:0 }, attempts = 0;
-  while (!valid && attempts < 200) { mine.x = Math.floor(Math.random()*GRID_W); mine.y = Math.floor(Math.random()*GRID_H); valid = !snake.some(function(s){ return s.x===mine.x && s.y===mine.y; }) && !mines.some(function(m){ return m.x===mine.x && m.y===mine.y; }) && !(food.x===mine.x && food.y===mine.y); attempts++; }
-  if (valid) mines.push(mine);
+
+// ============================================================
+//  РАЗМЕЩЕНИЕ МИН
+// ============================================================
+function placeMines() {
+  mines = [];
+  var totalCells = GRID_W * GRID_H;
+  mineCount = Math.max(3, Math.floor(totalCells * 0.15));
+  for (var i = 0; i < mineCount; i++) { addMine(); }
 }
+function addMine() {
+  var occupied = {};
+  for (var i = 0; i < snake.length; i++) occupied[snake[i].x + ',' + snake[i].y] = true;
+  for (var j = 0; j < mines.length; j++) occupied[mines[j].x + ',' + mines[j].y] = true;
+  if (food) occupied[food.x + ',' + food.y] = true;
+  var free = [];
+  for (var x = 0; x < GRID_W; x++) {
+    for (var y = 0; y < GRID_H; y++) {
+      if (!occupied[x + ',' + y]) free.push({ x: x, y: y });
+    }
+  }
+  if (free.length > 0) {
+    var pos = free[Math.floor(Math.random() * free.length)];
+    mines.push(pos);
+  }
+}
+
 function updateScore() { elScore.textContent = score; }
-function showOverlay(title, text, green) { elOverlay.classList.remove('hidden'); elOverlayTitle.textContent = title; elOverlayTitle.style.color = green ? '#00f260' : '#ff4757'; elOverlayText.textContent = text; }
+function showOverlay(title, text, green) {
+  elOverlay.classList.remove('hidden');
+  elOverlayTitle.textContent = title;
+  elOverlayTitle.style.color = green ? '#00f260' : '#ff4757';
+  elOverlayText.textContent = text;
+}
 function hideOverlay() { elOverlay.classList.add('hidden'); }
 
+// ============================================================
+//  ОТРИСОВКА
+// ============================================================
 function draw() {
   var tc = getThemeColors();
   ctx.fillStyle = tc.bg;
@@ -517,49 +685,81 @@ function drawMines() {
   for (var i = 0; i < mines.length; i++) {
     var cx = mines[i].x * TILE + TILE / 2, cy = mines[i].y * TILE + TILE / 2;
     ctx.shadowColor = '#ff4757'; ctx.shadowBlur = 12 * pulse * nm;
-    var grad = ctx.createRadialGradient(cx, cy, 1, cx, cy, r); grad.addColorStop(0, '#ff6b6b'); grad.addColorStop(1, '#c0392b');
-    ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
+    var grad = ctx.createRadialGradient(cx, cy, 1, cx, cy, r);
+    grad.addColorStop(0, '#ff6b6b'); grad.addColorStop(1, '#c0392b');
+    ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
     ctx.fillStyle = '#c0392b';
-    for (var s = 0; s < 8; s++) { var ang = (s/8)*Math.PI*2; var sx1=cx+Math.cos(ang)*r*0.8, sy1=cy+Math.sin(ang)*r*0.8; var sx2=cx+Math.cos(ang)*r*1.3, sy2=cy+Math.sin(ang)*r*1.3; var ang2=ang+Math.PI/8; var sx3=cx+Math.cos(ang2)*r*0.8, sy3=cy+Math.sin(ang2)*r*0.8; ctx.beginPath(); ctx.moveTo(sx1,sy1); ctx.lineTo(sx2,sy2); ctx.lineTo(sx3,sy3); ctx.closePath(); ctx.fill(); }
+    for (var s = 0; s < 8; s++) {
+      var ang = (s/8)*Math.PI*2;
+      var sx1=cx+Math.cos(ang)*r*0.8, sy1=cy+Math.sin(ang)*r*0.8;
+      var sx2=cx+Math.cos(ang)*r*1.3, sy2=cy+Math.sin(ang)*r*1.3;
+      var ang2=ang+Math.PI/8;
+      var sx3=cx+Math.cos(ang2)*r*0.8, sy3=cy+Math.sin(ang2)*r*0.8;
+      ctx.beginPath(); ctx.moveTo(sx1,sy1); ctx.lineTo(sx2,sy2); ctx.lineTo(sx3,sy3); ctx.closePath(); ctx.fill();
+    }
     ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx, cy, Math.max(1, r*0.2), 0, Math.PI*2); ctx.fill();
   }
 }
 
 function drawFood() {
+  if (!food) return;
   var cx = food.x * TILE + TILE / 2, cy = food.y * TILE + TILE / 2;
   var r = Math.max(4, Math.floor(TILE / 2 - 3)), ft = settings.food;
   var pulse = Math.sin(performance.now() / 250) * 0.3 + 0.7, nm = settings.neon ? 2 : 1;
   if (ft === 'apple') {
     ctx.shadowColor = '#ff3838'; ctx.shadowBlur = 18 * pulse * nm;
-    var g = ctx.createRadialGradient(cx-2, cy-2, 1, cx, cy, r); g.addColorStop(0, '#ff6b6b'); g.addColorStop(1, '#c0392b');
+    var g = ctx.createRadialGradient(cx-2, cy-2, 1, cx, cy, r);
+    g.addColorStop(0, '#ff6b6b'); g.addColorStop(1, '#c0392b');
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
     ctx.fillStyle = '#2ecc71'; ctx.beginPath(); ctx.ellipse(cx+3, cy-r+1, 4, 2.5, -0.4, 0, Math.PI*2); ctx.fill();
-    ctx.strokeStyle = '#8b4513'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(cx, cy-r+2); ctx.lineTo(cx, cy-r-2); ctx.stroke();
+    ctx.strokeStyle = '#8b4513'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(cx, cy-r+2); ctx.lineTo(cx, cy-r-2); ctx.stroke();
   } else if (ft === 'banana') {
     ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 15 * pulse * nm; ctx.fillStyle = '#ffe066';
-    ctx.beginPath(); ctx.moveTo(cx-r*0.7, cy+r*0.5); ctx.quadraticCurveTo(cx-r*0.3, cy-r*0.8, cx+r*0.6, cy-r*0.5); ctx.quadraticCurveTo(cx+r*0.3, cy+r*0.1, cx+r*0.5, cy+r*0.6); ctx.quadraticCurveTo(cx+r*0.2, cy+r*0.4, cx-r*0.3, cy+r*0.5); ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.beginPath(); ctx.moveTo(cx-r*0.7, cy+r*0.5);
+    ctx.quadraticCurveTo(cx-r*0.3, cy-r*0.8, cx+r*0.6, cy-r*0.5);
+    ctx.quadraticCurveTo(cx+r*0.3, cy+r*0.1, cx+r*0.5, cy+r*0.6);
+    ctx.quadraticCurveTo(cx+r*0.2, cy+r*0.4, cx-r*0.3, cy+r*0.5);
+    ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0;
     ctx.fillStyle = '#daa520'; ctx.beginPath(); ctx.arc(cx-r*0.7, cy+r*0.5, 2, 0, Math.PI*2); ctx.fill();
   } else if (ft === 'cherry') {
     ctx.shadowColor = '#ff1744'; ctx.shadowBlur = 15 * pulse * nm; ctx.fillStyle = '#e91e63';
     ctx.beginPath(); ctx.arc(cx-r*0.35, cy+r*0.25, r*0.5, 0, Math.PI*2); ctx.fill();
     ctx.beginPath(); ctx.arc(cx+r*0.35, cy+r*0.25, r*0.5, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
-    ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.arc(cx-r*0.5, cy+r*0.1, r*0.15, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.beginPath(); ctx.arc(cx-r*0.5, cy+r*0.1, r*0.15, 0, Math.PI*2); ctx.fill();
     ctx.beginPath(); ctx.arc(cx+r*0.2, cy+r*0.1, r*0.15, 0, Math.PI*2); ctx.fill();
-    ctx.strokeStyle = '#4a7c2e'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx-r*0.3, cy-r*0.15); ctx.quadraticCurveTo(cx-r*0.1, cy-r*0.7, cx, cy-r*0.8); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx+r*0.3, cy-r*0.15); ctx.quadraticCurveTo(cx+r*0.1, cy-r*0.6, cx, cy-r*0.8); ctx.stroke();
+    ctx.strokeStyle = '#4a7c2e'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx-r*0.3, cy-r*0.15);
+    ctx.quadraticCurveTo(cx-r*0.1, cy-r*0.7, cx, cy-r*0.8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx+r*0.3, cy-r*0.15);
+    ctx.quadraticCurveTo(cx+r*0.1, cy-r*0.6, cx, cy-r*0.8); ctx.stroke();
   } else if (ft === 'coffee') {
     var cupW = Math.max(6, Math.floor(r*1.1)), cupH = Math.max(8, Math.floor(r*1.3)), cupY = cy - cupH/2 + r*0.15;
-    ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(cx-r*0.3, cupY-r*0.2); ctx.quadraticCurveTo(cx-r*0.5, cupY-r*0.5, cx-r*0.3, cupY-r*0.8); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx+r*0.3, cupY-r*0.2); ctx.quadraticCurveTo(cx+r*0.5, cupY-r*0.5, cx+r*0.3, cupY-r*0.8); ctx.stroke();
-    ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(2, r*0.12); ctx.beginPath(); ctx.arc(cx+cupW/2+r*0.15, cy+r*0.05, r*0.25, -Math.PI*0.45, Math.PI*0.45); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(cx-r*0.3, cupY-r*0.2);
+    ctx.quadraticCurveTo(cx-r*0.5, cupY-r*0.5, cx-r*0.3, cupY-r*0.8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx+r*0.3, cupY-r*0.2);
+    ctx.quadraticCurveTo(cx+r*0.5, cupY-r*0.5, cx+r*0.3, cupY-r*0.8); ctx.stroke();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(2, r*0.12);
+    ctx.beginPath(); ctx.arc(cx+cupW/2+r*0.15, cy+r*0.05, r*0.25, -Math.PI*0.45, Math.PI*0.45); ctx.stroke();
     var halfTop = cupW/2, halfBot = cupW*0.35, topY = cupY, botY = cupY + cupH;
-    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(cx-halfTop, topY); ctx.lineTo(cx+halfTop, topY); ctx.lineTo(cx+halfBot, botY); ctx.lineTo(cx-halfBot, botY); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.beginPath();
+    ctx.moveTo(cx-halfTop, topY); ctx.lineTo(cx+halfTop, topY);
+    ctx.lineTo(cx+halfBot, botY); ctx.lineTo(cx-halfBot, botY); ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#5d4037'; ctx.beginPath(); ctx.ellipse(cx, topY, halfTop-1, r*0.15, 0, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.beginPath(); ctx.ellipse(cx-r*0.2, topY-1, halfTop*0.3, r*0.06, 0, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.beginPath(); ctx.moveTo(cx-halfTop+2, topY+2); ctx.lineTo(cx-halfTop+4, topY+2); ctx.lineTo(cx-halfBot+3, botY-2); ctx.lineTo(cx-halfBot+1, botY-2); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.beginPath(); ctx.ellipse(cx-r*0.2, topY-1, halfTop*0.3, r*0.06, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.beginPath();
+    ctx.moveTo(cx-halfTop+2, topY+2); ctx.lineTo(cx-halfTop+4, topY+2);
+    ctx.lineTo(cx-halfBot+3, botY-2); ctx.lineTo(cx-halfBot+1, botY-2); ctx.closePath(); ctx.fill();
   }
 }
 
+// ============================================================
+//  ОТРИСОВКА ЗМЕЙКИ — ПЛАВНЫЕ FLOAT-КООРДИНАТЫ
+// ============================================================
 function drawSnake() {
   ctx.shadowBlur = 0;
   var sc = getCachedSnakeColors();
@@ -577,8 +777,11 @@ function drawSnake() {
     var color;
     if (settings.rainbow) { color = 'hsl(' + ((i * 25 + now / 20) % 360) + ',70%,55%)'; }
     else if (settings.theme === 'bw') { var v = Math.round(255 - 170 * t); color = 'rgb(' + v + ',' + v + ',' + v + ')'; }
-    else if (settings.theme === 'invert' && settings.snakeColor === 'default') { color = 'rgb(' + Math.round(5+(0-5)*t) + ',' + Math.round(117+(242-117)*t) + ',' + Math.round(230+(96-230)*t) + ')'; }
-    else { color = 'rgb(' + Math.round(sc.head.r+(sc.tail.r-sc.head.r)*t) + ',' + Math.round(sc.head.g+(sc.tail.g-sc.head.g)*t) + ',' + Math.round(sc.head.b+(sc.tail.b-sc.head.b)*t) + ')'; }
+    else if (settings.theme === 'invert' && settings.snakeColor === 'default') {
+      color = 'rgb(' + Math.round(5+(0-5)*t) + ',' + Math.round(117+(242-117)*t) + ',' + Math.round(230+(96-230)*t) + ')';
+    } else {
+      color = 'rgb(' + Math.round(sc.head.r+(sc.tail.r-sc.head.r)*t) + ',' + Math.round(sc.head.g+(sc.tail.g-sc.head.g)*t) + ',' + Math.round(sc.head.b+(sc.tail.b-sc.head.b)*t) + ')';
+    }
 
     if (i === 0) { ctx.shadowColor = settings.rainbow ? 'hsl(' + (now/20 % 360) + ',70%,55%)' : sc.glow; ctx.shadowBlur = 15 * nm; }
 
@@ -589,7 +792,10 @@ function drawSnake() {
     if (i === len - 1 && i > 0) {
       var fireC = null;
       for (var k = 0; k < cosmetics.length; k++) { if (cosmetics[k].id === 'fire' && cosmetics[k].unlocked) { fireC = cosmetics[k]; break; } }
-      if (fireC) { ctx.shadowColor = '#ff4500'; ctx.shadowBlur = 10 * nm; ctx.fillStyle = '#ff6b35'; ctx.beginPath(); ctx.arc(x+TILE/2, y+TILE/2, Math.max(2, size/4), 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0; }
+      if (fireC) {
+        ctx.shadowColor = '#ff4500'; ctx.shadowBlur = 10 * nm; ctx.fillStyle = '#ff6b35';
+        ctx.beginPath(); ctx.arc(x+TILE/2, y+TILE/2, Math.max(2, size/4), 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
+      }
     }
     if (i === 0) { ctx.shadowBlur = 0; drawEyes(x, y); drawCosmetics(x, y); }
   }
@@ -599,10 +805,31 @@ function drawCosmetics(x, y) {
   var cx = x + TILE/2, cy = y + TILE/2, r = Math.max(4, TILE/2 - 3);
   for (var i = 0; i < cosmetics.length; i++) {
     var c = cosmetics[i]; if (!c.unlocked) continue;
-    if (c.id === 'crown') { ctx.fillStyle = '#ffd700'; ctx.beginPath(); ctx.moveTo(cx-r*0.6, cy-r*0.5); ctx.lineTo(cx-r*0.6, cy-r*0.8); ctx.lineTo(cx-r*0.3, cy-r*0.6); ctx.lineTo(cx, cy-r*0.8); ctx.lineTo(cx+r*0.3, cy-r*0.6); ctx.lineTo(cx+r*0.6, cy-r*0.8); ctx.lineTo(cx+r*0.6, cy-r*0.5); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.arc(cx, cy-r*0.7, 1.5, 0, Math.PI*2); ctx.fill(); }
-    else if (c.id === 'horns') { ctx.fillStyle = '#8b4513'; ctx.beginPath(); ctx.ellipse(cx-r*0.5, cy-r*0.6, r*0.15, r*0.3, -0.3, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(cx+r*0.5, cy-r*0.6, r*0.15, r*0.3, 0.3, 0, Math.PI*2); ctx.fill(); }
-    else if (c.id === 'halo') { ctx.strokeStyle = '#fffde7'; ctx.lineWidth = 2; ctx.shadowColor = '#fffde7'; ctx.shadowBlur = 8; ctx.beginPath(); ctx.ellipse(cx, cy-r*0.7, r*0.5, r*0.15, 0, 0, Math.PI*2); ctx.stroke(); ctx.shadowBlur = 0; }
-    else if (c.id === 'star') { ctx.fillStyle = '#ffd700'; ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 6; ctx.beginPath(); for (var k = 0; k < 5; k++) { var a = -Math.PI/2 + k*Math.PI*2/5; var px = cx+Math.cos(a)*r*0.3, py = cy-r*0.6+Math.sin(a)*r*0.3; if (k===0) ctx.moveTo(px,py); else ctx.lineTo(px,py); a += Math.PI/5; px = cx+Math.cos(a)*r*0.12; py = cy-r*0.6+Math.sin(a)*r*0.12; ctx.lineTo(px,py); } ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0; }
+    if (c.id === 'crown') {
+      ctx.fillStyle = '#ffd700'; ctx.beginPath();
+      ctx.moveTo(cx-r*0.6, cy-r*0.5); ctx.lineTo(cx-r*0.6, cy-r*0.8);
+      ctx.lineTo(cx-r*0.3, cy-r*0.6); ctx.lineTo(cx, cy-r*0.8);
+      ctx.lineTo(cx+r*0.3, cy-r*0.6); ctx.lineTo(cx+r*0.6, cy-r*0.8);
+      ctx.lineTo(cx+r*0.6, cy-r*0.5); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.arc(cx, cy-r*0.7, 1.5, 0, Math.PI*2); ctx.fill();
+    } else if (c.id === 'horns') {
+      ctx.fillStyle = '#8b4513';
+      ctx.beginPath(); ctx.ellipse(cx-r*0.5, cy-r*0.6, r*0.15, r*0.3, -0.3, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx+r*0.5, cy-r*0.6, r*0.15, r*0.3, 0.3, 0, Math.PI*2); ctx.fill();
+    } else if (c.id === 'halo') {
+      ctx.strokeStyle = '#fffde7'; ctx.lineWidth = 2; ctx.shadowColor = '#fffde7'; ctx.shadowBlur = 8;
+      ctx.beginPath(); ctx.ellipse(cx, cy-r*0.7, r*0.5, r*0.15, 0, 0, Math.PI*2); ctx.stroke(); ctx.shadowBlur = 0;
+    } else if (c.id === 'star') {
+      ctx.fillStyle = '#ffd700'; ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 6; ctx.beginPath();
+      for (var k = 0; k < 5; k++) {
+        var a = -Math.PI/2 + k*Math.PI*2/5;
+        var px = cx+Math.cos(a)*r*0.3, py = cy-r*0.6+Math.sin(a)*r*0.3;
+        if (k===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+        a += Math.PI/5; px = cx+Math.cos(a)*r*0.12; py = cy-r*0.6+Math.sin(a)*r*0.12;
+        ctx.lineTo(px,py);
+      }
+      ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0;
+    }
   }
 }
 
@@ -622,11 +849,17 @@ function drawEyes(x, y) {
   ctx.beginPath(); ctx.arc(ex2, ey2, pupilR, 0, Math.PI*2); ctx.fill();
 }
 
-function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x+r, y); ctx.arcTo(x+w, y, x+w, y+h, r); ctx.arcTo(x+w, y+h, x, y+h, r); ctx.arcTo(x, y+h, x, y, r); ctx.arcTo(x, y, x+w, y, r); ctx.closePath(); }
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x+r, y);
+  ctx.arcTo(x+w, y, x+w, y+h, r); ctx.arcTo(x+w, y+h, x, y+h, r);
+  ctx.arcTo(x, y+h, x, y, r); ctx.arcTo(x, y, x+w, y, r); ctx.closePath();
+}
 
+// ============================================================
+//  ЛОГИКА
+// ============================================================
 function update() {
   prevSnake = snake.map(function(s){ return { x: s.x, y: s.y }; });
-
   dx = pendingDx; dy = pendingDy;
   var head = { x: snake[0].x + dx, y: snake[0].y + dy };
 
@@ -639,7 +872,7 @@ function update() {
   }
 
   snake.unshift(head);
-  if (head.x === food.x && head.y === food.y) {
+  if (food && head.x === food.x && head.y === food.y) {
     score++; updateScore(); placeFood(); justGrew = true;
     if (currentMode === 'mines') addMine();
   } else { snake.pop(); justGrew = false; }
@@ -652,25 +885,34 @@ function update() {
   }
 }
 
-function checkSelfCollision(head) { for (var i = 0; i < snake.length; i++) { if (snake[i].x === head.x && snake[i].y === head.y) return true; } return false; }
-function checkMineCollision(head) { for (var i = 0; i < mines.length; i++) { if (mines[i].x === head.x && mines[i].y === head.y) return true; } return false; }
+function checkSelfCollision(head) {
+  for (var i = 0; i < snake.length; i++) { if (snake[i].x === head.x && snake[i].y === head.y) return true; }
+  return false;
+}
+function checkMineCollision(head) {
+  for (var i = 0; i < mines.length; i++) { if (mines[i].x === head.x && mines[i].y === head.y) return true; }
+  return false;
+}
 
-function gameOver() {
+function gameOver(isWin) {
   stopGame(); stats.games++; stats.totalScore += score;
   var isNew = false; if (score > stats.best) { stats.best = score; isNew = true; } saveStats();
   var newItems = checkUnlocks(score);
-  var phrase = memePhrases[Math.floor(Math.random() * memePhrases.length)];
+  var phrase = isWin ? '🏆 Поле заполнено! Ты победил!' : memePhrases[Math.floor(Math.random() * memePhrases.length)];
   var msg = phrase + ' | Счёт: ' + score;
   if (isNew) msg += ' | 🏆 Новый рекорд!';
   if (newItems.length > 0) msg += ' | 🎁 Открыто: ' + newItems.map(function(c){ return c.name; }).join(', ');
-  showOverlay('Игра окончена', msg); elBest.textContent = stats.best;
+  showOverlay(isWin ? 'Победа!' : 'Игра окончена', msg, isWin);
+  elBest.textContent = stats.best;
   if (isNew) elNewRecord.style.display = 'inline';
   score = 0; updateScore(); isGameOver = true;
 }
 
+// ============================================================
+//  ГЛАВНЫЙ ЦИКЛ
+// ============================================================
 function gameLoop(timestamp) {
   if (!gameRunning) return;
-
   var elapsed = timestamp - lastStepTime;
   var progress = elapsed / stepInterval;
   if (progress > 1) progress = 1;
@@ -707,6 +949,9 @@ function startLoop() {
   rafId = requestAnimationFrame(gameLoop);
 }
 
+// ============================================================
+//  УПРАВЛЕНИЕ
+// ============================================================
 function handleDirection(ndx, ndy) {
   if (!currentMode || elGameScreen.style.display === 'none') return;
   if (isGameOver) { initGame(); }
@@ -730,16 +975,33 @@ window.addEventListener('keydown', function(e) {
 
 document.querySelectorAll('.touch-btn').forEach(function(btn) {
   var dir = btn.dataset.dir;
-  var handler = function(e) { e.preventDefault(); if (dir==='up') handleDirection(0,-1); else if (dir==='down') handleDirection(0,1); else if (dir==='left') handleDirection(-1,0); else if (dir==='right') handleDirection(1,0); };
-  btn.addEventListener('touchstart', handler, { passive: false }); btn.addEventListener('click', handler);
+  var handler = function(e) {
+    e.preventDefault();
+    if (dir==='up') handleDirection(0,-1);
+    else if (dir==='down') handleDirection(0,1);
+    else if (dir==='left') handleDirection(-1,0);
+    else if (dir==='right') handleDirection(1,0);
+  };
+  btn.addEventListener('touchstart', handler, { passive: false });
+  btn.addEventListener('click', handler);
 });
 
-var touchStartX = 0, touchStartY = 0; var gameWrap = document.getElementById('game-wrap');
-gameWrap.addEventListener('touchstart', function(e){ e.preventDefault(); touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; }, { passive: false });
+var touchStartX = 0, touchStartY = 0;
+var gameWrap = document.getElementById('game-wrap');
+gameWrap.addEventListener('touchstart', function(e){
+  e.preventDefault(); touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY;
+}, { passive: false });
 gameWrap.addEventListener('touchmove', function(e){ e.preventDefault(); }, { passive: false });
-gameWrap.addEventListener('touchend', function(e){ e.preventDefault(); var dxt = e.changedTouches[0].clientX - touchStartX; var dyt = e.changedTouches[0].clientY - touchStartY; if (Math.abs(dxt)<20 && Math.abs(dyt)<20) return; if (Math.abs(dxt)>Math.abs(dyt)) handleDirection(dxt>0?1:-1, 0); else handleDirection(0, dyt>0?1:-1); }, { passive: false });
+gameWrap.addEventListener('touchend', function(e){
+  e.preventDefault();
+  var dxt = e.changedTouches[0].clientX - touchStartX;
+  var dyt = e.changedTouches[0].clientY - touchStartY;
+  if (Math.abs(dxt)<20 && Math.abs(dyt)<20) return;
+  if (Math.abs(dxt)>Math.abs(dyt)) handleDirection(dxt>0?1:-1, 0);
+  else handleDirection(0, dyt>0?1:-1);
+}, { passive: false });
 
 applyControlSetting();
 </script>
 </body>
-</html>
+  </html>
