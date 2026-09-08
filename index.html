@@ -18,7 +18,7 @@ body { font-family:'Segoe UI',Arial,sans-serif; background:linear-gradient(135de
 .menu-card .icon { font-size:3rem; margin-bottom:14px; }
 .menu-card h2 { font-size:1.3rem; margin-bottom:8px; }
 .menu-card p { font-size:.85rem; color:#aaa; line-height:1.5; }
-#game-screen { display:none; flex-direction:column; align-items:center; width:100%; max-width:500px; padding:30px 20px; animation:fadeIn .4s ease; }
+#game-screen { display:none; flex-direction:column; align-items:center; width:100%; max-width:500px; padding:30px 20px; animation:fadeIn .4s ease; touch-action:none; }
 #game-screen h2 { font-size:1.6rem; margin-bottom:4px; background:linear-gradient(135deg,#00f260,#0575e6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
 #game-screen .subtitle { font-size:.9rem; color:#888; margin-bottom:18px; }
 .game-wrap { position:relative; border-radius:14px; overflow:hidden; box-shadow:0 0 40px rgba(0,242,96,.15),0 8px 32px rgba(0,0,0,.5); touch-action:none; }
@@ -646,6 +646,7 @@ document.querySelectorAll('.menu-card').forEach(function(card) {
 
 function openGame(mode) {
   currentMode = mode;
+  document.body.style.overflow = 'hidden';
   document.getElementById('menu').style.display = 'none';
   document.getElementById('game-screen').style.display = 'flex';
   document.getElementById('game-title').textContent = modeInfo[mode].title;
@@ -658,6 +659,7 @@ function openGame(mode) {
 }
 function backToMenu() {
   stopGame();
+  document.body.style.overflow = '';
   document.getElementById('game-screen').style.display = 'none';
   document.getElementById('menu').style.display = 'block';
 }
