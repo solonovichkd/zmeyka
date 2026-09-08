@@ -160,7 +160,6 @@ canvas { display:block; background:#0a0a12; border-radius:14px; touch-action:non
   <span class="sponsor">Игра создана при поддержке ООО «ТМЫВ ДЕНЕГ» 💰</span>
 </div>
 
-<!-- Настройки -->
 <div id="settings-panel">
   <div class="panel-box">
     <h2>⚙️ Настройки</h2>
@@ -222,7 +221,6 @@ canvas { display:block; background:#0a0a12; border-radius:14px; touch-action:non
   </div>
 </div>
 
-<!-- Профиль -->
 <div id="profile-panel">
   <div class="panel-box">
     <h2>👤 Профиль</h2>
@@ -260,7 +258,7 @@ var pendingDx = 0, pendingDy = 0;
 var mines = [];
 var mineCount = 0;
 
-// Кэш для DOM-элементов
+// Кэш DOM-элементов
 var elScore = document.getElementById('score');
 var elBest = document.getElementById('best');
 var elNewRecord = document.getElementById('new-record');
@@ -273,9 +271,14 @@ var elGameTitle = document.getElementById('game-title');
 var elGameDesc = document.getElementById('game-desc');
 
 // ===== ТАЙМИНГ =====
-var baseSpeed = 130; // мс на шаг (быстрее оригинальных 500)
+var baseSpeed = 300;
 var lastStepTime = 0;
 var rafId = null;
+
+// ===== ИНТЕРПОЛЯЦИЯ ДЛЯ ПЛАВНОСТИ =====
+var interpEnabled = true;
+var prevSnake = null;
+var stepProgress = 0;
 
 // ===== НАСТРОЙКИ =====
 var DEFAULT_SETTINGS = {
@@ -400,6 +403,7 @@ function createCustomColorInput() {
     settings.customColor = this.value;
     saveSettings();
     document.querySelectorAll('.color-swatch').forEach(function(s) { s.classList.remove('active'); });
+    snakeColorCache = {};
   });
 }
 
@@ -417,6 +421,7 @@ function createSponsorSwatch() {
     saveSettings();
     document.querySelectorAll('.color-swatch').forEach(function(s) { s.classList.remove('active'); });
     sw.classList.add('active');
+    snakeColorCache = {};
   });
   row.appendChild(sw);
 }
@@ -472,6 +477,7 @@ var snakeColors = [
       settings.snakeColor = c.id; saveSettings();
       document.querySelectorAll('.color-swatch').forEach(function(s) { s.classList.remove('active'); });
       sw.classList.add('active');
+      snakeColorCache = {};
     });
     row.appendChild(sw);
   });
@@ -481,7 +487,6 @@ function rgbToHex(r, g, b) {
   return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
 }
 
-// Предрасчёт RGB-значений цветов змейки (кэш)
 var snakeColorCache = {};
 function getCachedSnakeColors() {
   var sc = getSnakeColorsRaw();
@@ -506,9 +511,9 @@ function getSnakeColorsRaw() {
 }
 
 function getThemeColors() {
-  if (settings.theme === 'bw') return { bg:'#000000', grid:'rgba(255,255,255,0.05)' };
-  if (settings.theme === 'invert') return { bg:'#f0f0f0', grid:'rgba(0,0,0,0.08)' };
-  return { bg:'#0a0a12', grid:'rgba(255,255,255,0.03)' };
+  if (settings.theme === 'bw') return { bg:'#000000' };
+  if (settings.theme === 'invert') return { bg:'#f0f0f0' };
+  return { bg:'#0a0a12' };
 }
 
 // ===== UI =====
@@ -566,7 +571,7 @@ document.querySelectorAll('.settings-opt').forEach(function(opt) {
     opt.classList.add('active');
     if (setting === 'control') applyControlSetting();
     if (setting === 'grid' && currentMode) { initGame(); showOverlay('Нажми любую стрелку', '', true); }
-    snakeColorCache = {}; // сброс кэша при смене цвета
+    snakeColorCache = {};
   });
 });
 
@@ -653,8 +658,10 @@ function restartCurrent() { initGame(); showOverlay('Нажми любую ст�
 function initGame() {
   stopGame(); setupGrid();
   snake = randomStart();
+  prevSnake = snake.map(function(s) { return { x: s.x, y: s.y }; });
   dx = 0; dy = 0; pendingDx = 0; pendingDy = 0;
   score = 0; gameRunning = false; isGameOver = false;
+  stepProgress = 0;
   mines = [];
   placeFood(); updateScore(); draw();
 }
@@ -711,18 +718,11 @@ function showOverlay(title, text, green) {
 }
 function hideOverlay() { elOverlay.classList.add('hidden'); }
 
-// ===== ОТРИСОВКА (оптимизированная) =====
+// ===== ОТРИСОВКА (без сетки, с интерполяцией) =====
 function draw() {
   var tc = getThemeColors();
   ctx.fillStyle = tc.bg;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // Сетка одним путем
-  ctx.beginPath();
-  for (var i = 0; i <= GRID_W; i++) { ctx.moveTo(i*TILE,0); ctx.lineTo(i*TILE,canvas.height); }
-  for (var j = 0; j <= GRID_H; j++) { ctx.moveTo(0,j*TILE); ctx.lineTo(canvas.width,j*TILE); }
-  ctx.strokeStyle = tc.grid; ctx.lineWidth = 1;
-  ctx.stroke();
 
   drawMines();
   drawFood();
@@ -841,6 +841,9 @@ function drawFood() {
   }
 }
 
+// Плавная интерполяция позиции сегмента
+function lerp(a, b, t) { return a + (b - a) * t; }
+
 function drawSnake() {
   ctx.shadowBlur = 0;
   var sc = getCachedSnakeColors();
@@ -848,9 +851,24 @@ function drawSnake() {
   var len = snake.length;
   var slMax = Math.max(len - 1, 1);
 
+  // Прогресс интерполяции (0..1) между шагами
+  var ip = interpEnabled && gameRunning && prevSnake ? stepProgress : 1;
+  if (ip > 1) ip = 1;
+
   for (var i = len - 1; i >= 0; i--) {
     var seg = snake[i];
-    var x = seg.x * TILE, y = seg.y * TILE;
+    var px, py;
+
+    // Интерполяция: если есть предыдущая позиция — плавно двигаем
+    if (interpEnabled && gameRunning && prevSnake && prevSnake.length === len) {
+      var prevSeg = prevSnake[i];
+      px = lerp(prevSeg.x, seg.x, ip) * TILE;
+      py = lerp(prevSeg.y, seg.y, ip) * TILE;
+    } else {
+      px = seg.x * TILE;
+      py = seg.y * TILE;
+    }
+
     var t = i / slMax;
 
     var color;
@@ -873,7 +891,7 @@ function drawSnake() {
     var pad = 2, size = TILE - pad * 2;
     var radius = Math.min(6, size / 3);
     ctx.fillStyle = color;
-    roundRect(ctx, x + pad, y + pad, size, size, radius);
+    roundRect(ctx, px + pad, py + pad, size, size, radius);
     ctx.fill();
 
     if (i === len - 1 && i > 0) {
@@ -884,12 +902,16 @@ function drawSnake() {
       if (fireC) {
         ctx.shadowColor = '#ff4500'; ctx.shadowBlur = 10 * nm;
         ctx.fillStyle = '#ff6b35';
-        ctx.beginPath(); ctx.arc(x + TILE/2, y + TILE/2, Math.max(2, size/4), 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(px + TILE/2, py + TILE/2, Math.max(2, size/4), 0, Math.PI*2); ctx.fill();
         ctx.shadowBlur = 0;
       }
     }
 
-    if (i === 0) { ctx.shadowBlur = 0; drawEyes(x, y); drawCosmetics(x, y); }
+    if (i === 0) {
+      ctx.shadowBlur = 0;
+      drawEyes(px, py);
+      drawCosmetics(px, py);
+    }
   }
 }
 
@@ -965,6 +987,9 @@ function roundRect(ctx, x, y, w, h, r) {
 
 // ===== ЛОГИКА =====
 function update() {
+  // Сохраняем предыдущие позиции для интерполяции
+  prevSnake = snake.map(function(s) { return { x: s.x, y: s.y }; });
+
   dx = pendingDx; dy = pendingDy;
   var head = { x: snake[0].x + dx, y: snake[0].y + dy };
   if (currentMode === 'classic') {
@@ -980,6 +1005,7 @@ function update() {
         checkSelfCollision(head)) {
       score = 0; updateScore();
       snake = randomStart();
+      prevSnake = snake.map(function(s) { return { x: s.x, y: s.y }; });
       dx = 0; dy = 0; pendingDx = 0; pendingDy = 0;
       placeFood(); gameRunning = false;
       showOverlay('Ой! Сброс очков', 'Нажми стрелку, чтобы продолжить', true);
@@ -995,7 +1021,6 @@ function update() {
   }
 }
 
-// Быстрая проверка столкновения с собой (без .some)
 function checkSelfCollision(head) {
   for (var i = 0; i < snake.length; i++) {
     if (snake[i].x === head.x && snake[i].y === head.y) return true;
@@ -1003,7 +1028,6 @@ function checkSelfCollision(head) {
   return false;
 }
 
-// Быстрая проверка столкновения с миной
 function checkMineCollision(head) {
   for (var i = 0; i < mines.length; i++) {
     if (mines[i].x === head.x && mines[i].y === head.y) return true;
@@ -1029,13 +1053,24 @@ function gameOver() {
   isGameOver = true;
 }
 
-// ===== ГЛАВНЫЙ ЦИКЛ (requestAnimationFrame + фиксированный шаг) =====
+// ===== ГЛАВНЫЙ ЦИКЛ =====
+// requestAnimationFrame для отрисовки (60 FPS),
+// логика шагает каждые 300 мс,
+// между шагами — плавная интерполяция позиций
 function gameLoop(timestamp) {
   if (!gameRunning) return;
-  if (timestamp - lastStepTime >= baseSpeed) {
+  var elapsed = timestamp - lastStepTime;
+  stepProgress = elapsed / baseSpeed;
+
+  if (elapsed >= baseSpeed) {
     lastStepTime = timestamp;
+    stepProgress = 0;
     update();
+    // После update stepProgress сброшен, но до следующего кадра он будет ~0
+    // Поэтому устанавливаем чуть больше 0 для плавного старта
+    stepProgress = Math.min((timestamp - lastStepTime) / baseSpeed, 1);
   }
+
   draw();
   rafId = requestAnimationFrame(gameLoop);
 }
@@ -1045,6 +1080,7 @@ function startLoop() {
   gameRunning = true; hideOverlay();
   if (currentMode === 'mines' && mines.length === 0) placeMines();
   lastStepTime = performance.now();
+  stepProgress = 0;
   rafId = requestAnimationFrame(gameLoop);
 }
 
