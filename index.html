@@ -112,10 +112,10 @@ canvas { display:block; background:#0a0a12; border-radius:14px; touch-action:non
       <h2>Классическая</h2>
       <p>Стены и хвост убивают. Набери максимум очков.</p>
     </div>
-    <div class="menu-card" data-mode="accelerate">
-      <div class="icon">⚡</div>
-      <h2>С ускорением</h2>
-      <p>С каждым куском змейка быстрее.</p>
+    <div class="menu-card" data-mode="mines">
+      <div class="icon">💣</div>
+      <h2>Сапёр</h2>
+      <p>Мины на поле! Ешь еду, не задевая их.</p>
     </div>
     <div class="menu-card" data-mode="immortal">
       <div class="icon">♾️</div>
@@ -257,6 +257,10 @@ var GRID_H = 10;
 var snake, food, dx, dy, score, gameRunning, speed, timeoutId, isGameOver;
 var currentMode = null;
 var pendingDx = 0, pendingDy = 0;
+
+// ===== МИНЫ (для режима "Сапёр") =====
+var mines = [];
+var mineCount = 0;
 
 // ===== НАСТРОЙКИ =====
 var DEFAULT_SETTINGS = {
@@ -623,11 +627,12 @@ function randomStart() {
 var memePhrases = [
   "Опять не хватило 1 кусочка 😔","Змея сказала: «Я так не играю» 🐍",
   "Даже кот бы сыграл лучше 🐱","Стена победила. Стена всегда побеждает 🧱",
-  "Это не твоя вина. Это баг в матрице 💊","Попробуй ещё раз!","Красиво умер 😎"
+  "Это не твоя вина. Это баг в матрице 💊","Попробуй ещё раз!","Красиво умер 😎",
+  "БУМ! Мин сработала 💥"
 ];
 var modeInfo = {
   classic:    { title:'🎯 Классическая змейка', desc:'Стены и хвост убивают. Набери максимум!' },
-  accelerate: { title:'⚡ Змейка с ускорением',  desc:'С каждым куском змейка быстрее!' },
+  mines:      { title:'💣 Змейка-сапёр',         desc:'Мины на поле! Ешь еду, не задевая их.' },
   immortal:   { title:'♾️ Бессмертная змейка',   desc:'При столкновении — сброс очков и заново.' }
 };
 
@@ -669,6 +674,7 @@ function initGame() {
   snake = randomStart();
   dx = 0; dy = 0; pendingDx = 0; pendingDy = 0;
   score = 0; speed = 500; gameRunning = false; isGameOver = false;
+  mines = [];
   placeFood(); updateScore(); draw();
 }
 function stopGame() { if (timeoutId) { clearTimeout(timeoutId); timeoutId = null; } gameRunning = false; }
@@ -678,8 +684,49 @@ function placeFood() {
   do {
     food = { x: Math.floor(Math.random()*GRID_W), y: Math.floor(Math.random()*GRID_H) };
     tries++;
-  } while (snake.some(function(s){ return s.x===food.x && s.y===food.y; }) && tries < 200);
+  } while (
+    (snake.some(function(s){ return s.x===food.x && s.y===food.y; }) ||
+     (currentMode === 'mines' && mines.some(function(m){ return m.x===food.x && m.y===food.y; })))
+    && tries < 200
+  );
 }
+
+// ===== РАССТАНОВКА МИН =====
+function placeMines() {
+  mines = [];
+  var totalCells = GRID_W * GRID_H;
+  mineCount = Math.max(3, Math.floor(totalCells * 0.15));
+  for (var i = 0; i < mineCount; i++) {
+    var valid = false;
+    var mine = { x: 0, y: 0 };
+    var attempts = 0;
+    while (!valid && attempts < 200) {
+      mine.x = Math.floor(Math.random() * GRID_W);
+      mine.y = Math.floor(Math.random() * GRID_H);
+      valid = !snake.some(function(s) { return s.x === mine.x && s.y === mine.y; }) &&
+              !mines.some(function(m) { return m.x === mine.x && m.y === mine.y; });
+      attempts++;
+    }
+    if (valid) mines.push(mine);
+  }
+}
+
+// Добавляем мину при поедании еды в режиме сапёра
+function addMine() {
+  var valid = false;
+  var mine = { x: 0, y: 0 };
+  var attempts = 0;
+  while (!valid && attempts < 200) {
+    mine.x = Math.floor(Math.random() * GRID_W);
+    mine.y = Math.floor(Math.random() * GRID_H);
+    valid = !snake.some(function(s) { return s.x === mine.x && s.y === mine.y; }) &&
+            !mines.some(function(m) { return m.x === mine.x && m.y === mine.y; }) &&
+            !(food.x === mine.x && food.y === mine.y);
+    attempts++;
+  }
+  if (valid) mines.push(mine);
+}
+
 function updateScore() { document.getElementById('score').textContent = score; }
 function showOverlay(title, text, green) {
   var ov = document.getElementById('overlay');
@@ -698,7 +745,61 @@ function draw() {
   ctx.strokeStyle = tc.grid; ctx.lineWidth = 1;
   for (var i = 0; i <= GRID_W; i++) { ctx.beginPath(); ctx.moveTo(i*TILE,0); ctx.lineTo(i*TILE,canvas.height); ctx.stroke(); }
   for (var j = 0; j <= GRID_H; j++) { ctx.beginPath(); ctx.moveTo(0,j*TILE); ctx.lineTo(canvas.width,j*TILE); ctx.stroke(); }
-  drawFood(); drawSnake();
+  drawMines();
+  drawFood();
+  drawSnake();
+}
+
+// ===== ОТРИСОВКА МИН =====
+function drawMines() {
+  if (currentMode !== 'mines' || mines.length === 0) return;
+  var nm = settings.neon ? 2 : 1;
+  var pulse = Math.sin(Date.now() / 300) * 0.3 + 0.7;
+
+  mines.forEach(function(mine) {
+    var cx = mine.x * TILE + TILE / 2;
+    var cy = mine.y * TILE + TILE / 2;
+    var r = Math.max(3, Math.floor(TILE / 2 - 6));
+
+    // Свечение
+    ctx.shadowColor = '#ff4757';
+    ctx.shadowBlur = 12 * pulse * nm;
+
+    // Тело мины (круг)
+    var grad = ctx.createRadialGradient(cx, cy, 1, cx, cy, r);
+    grad.addColorStop(0, '#ff6b6b');
+    grad.addColorStop(1, '#c0392b');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Шипы
+    ctx.fillStyle = '#c0392b';
+    for (var s = 0; s < 8; s++) {
+      var ang = (s / 8) * Math.PI * 2;
+      var sx1 = cx + Math.cos(ang) * r * 0.8;
+      var sy1 = cy + Math.sin(ang) * r * 0.8;
+      var sx2 = cx + Math.cos(ang) * r * 1.3;
+      var sy2 = cy + Math.sin(ang) * r * 1.3;
+      var ang2 = ang + Math.PI / 8;
+      var sx3 = cx + Math.cos(ang2) * r * 0.8;
+      var sy3 = cy + Math.sin(ang2) * r * 0.8;
+      ctx.beginPath();
+      ctx.moveTo(sx1, sy1);
+      ctx.lineTo(sx2, sy2);
+      ctx.lineTo(sx3, sy3);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Центральная точка
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(cx, cy, Math.max(1, r * 0.2), 0, Math.PI * 2);
+    ctx.fill();
+  });
 }
 
 function drawFood() {
@@ -756,29 +857,23 @@ function drawFood() {
     var cupW = Math.max(6, Math.floor(r * 1.1));
     var cupH = Math.max(8, Math.floor(r * 1.3));
     var cupY = cy - cupH / 2 + r * 0.15;
-    // Пар
     ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(cx - r*0.3, cupY - r*0.2);
     ctx.quadraticCurveTo(cx - r*0.5, cupY - r*0.5, cx - r*0.3, cupY - r*0.8); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(cx + r*0.3, cupY - r*0.2);
     ctx.quadraticCurveTo(cx + r*0.5, cupY - r*0.5, cx + r*0.3, cupY - r*0.8); ctx.stroke();
-    // Ручка
     ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(2, r*0.12);
     ctx.beginPath(); ctx.arc(cx + cupW/2 + r*0.15, cy + r*0.05, r*0.25, -Math.PI*0.45, Math.PI*0.45); ctx.stroke();
-    // Чашка
     var halfTop = cupW / 2, halfBot = cupW * 0.35;
     var topY = cupY, botY = cupY + cupH;
     ctx.fillStyle = '#fff';
     ctx.beginPath(); ctx.moveTo(cx - halfTop, topY); ctx.lineTo(cx + halfTop, topY);
     ctx.lineTo(cx + halfBot, botY); ctx.lineTo(cx - halfBot, botY);
     ctx.closePath(); ctx.fill();
-    // Кофе
     ctx.fillStyle = '#5d4037';
     ctx.beginPath(); ctx.ellipse(cx, topY, halfTop - 1, r*0.15, 0, 0, Math.PI*2); ctx.fill();
-    // Блик на кофе
     ctx.fillStyle = 'rgba(255,255,255,0.2)';
     ctx.beginPath(); ctx.ellipse(cx - r*0.2, topY - 1, halfTop*0.3, r*0.06, 0, 0, Math.PI*2); ctx.fill();
-    // Блик на чашке
     ctx.fillStyle = 'rgba(255,255,255,0.3)';
     ctx.beginPath(); ctx.moveTo(cx - halfTop + 2, topY + 2); ctx.lineTo(cx - halfTop + 4, topY + 2);
     ctx.lineTo(cx - halfBot + 3, botY - 2); ctx.lineTo(cx - halfBot + 1, botY - 2);
@@ -912,14 +1007,18 @@ function update() {
   if (currentMode === 'classic') {
     if (head.x < 0 || head.x >= GRID_W || head.y < 0 || head.y >= GRID_H ||
         snake.some(function(s){ return s.x===head.x && s.y===head.y; })) { gameOver(); return; }
-  } else if (currentMode === 'accelerate') {
-    if (head.x < 0) head.x = GRID_W-1; if (head.x >= GRID_W) head.x = 0;
-    if (head.y < 0) head.y = GRID_H-1; if (head.y >= GRID_H) head.y = 0;
+  } else if (currentMode === 'mines') {
+    // Стены пропускают насквозь (телепорт)
+    if (head.x < 0) head.x = GRID_W - 1; if (head.x >= GRID_W) head.x = 0;
+    if (head.y < 0) head.y = GRID_H - 1; if (head.y >= GRID_H) head.y = 0;
+    // Столкновение с собой
     if (snake.some(function(s){ return s.x===head.x && s.y===head.y; })) { gameOver(); return; }
-    speed = Math.max(60, 500 - Math.floor(score/3) * 8);
+    // Столкновение с миной
+    if (mines.some(function(m){ return m.x===head.x && m.y===head.y; })) { gameOver(); return; }
   } else if (currentMode === 'immortal') {
     if (head.x < 0 || head.x >= GRID_W || head.y < 0 || head.y >= GRID_H ||
-        snake.some(function(s){ return s.x===head.x && s.y===head.y; })) {
+        snake.some(function(s){ return s.x===head.x && s.y===head.y; }) ||
+        (currentMode === 'mines' && mines.some(function(m){ return m.x===head.x && m.y===head.y; }))) {
       score = 0; updateScore();
       snake = randomStart();
       dx = 0; dy = 0; pendingDx = 0; pendingDy = 0;
@@ -929,8 +1028,14 @@ function update() {
     }
   }
   snake.unshift(head);
-  if (head.x === food.x && head.y === food.y) { score++; updateScore(); placeFood(); }
-  else { snake.pop(); }
+  if (head.x === food.x && head.y === food.y) {
+    score++; updateScore();
+    placeFood();
+    // В режиме сапёра добавляем новую мину при поедании
+    if (currentMode === 'mines') addMine();
+  } else {
+    snake.pop();
+  }
 }
 
 function gameOver() {
@@ -953,7 +1058,12 @@ function gameOver() {
 }
 
 function loop() { update(); if (gameRunning) { draw(); timeoutId = setTimeout(loop, speed); } }
-function startLoop() { if (gameRunning) return; gameRunning = true; hideOverlay(); loop(); }
+function startLoop() {
+  if (gameRunning) return;
+  gameRunning = true; hideOverlay();
+  if (currentMode === 'mines' && mines.length === 0) placeMines();
+  loop();
+}
 
 // ===== УПРАВЛЕНИЕ =====
 function handleDirection(ndx, ndy) {
