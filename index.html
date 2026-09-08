@@ -5,174 +5,100 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <title>Змейка — Пет-проект</title>
 <style>
-  :root {
-    --bg-gradient: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-    --primary: #00f260;
-    --accent: #ffd700;
-    --text: #fff;
-    --dim: #888;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { 
-    font-family: 'Segoe UI', Arial, sans-serif; 
-    background: var(--bg-gradient); 
-    color: var(--text); 
-    min-height: 100vh; 
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
-    justify-content: center; 
-    overflow-x: hidden; 
-    user-select: none;
-  }
-
-  /* --- Общие стили UI --- */
-  .toast { 
-    position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-20px); 
-    background: #1a1a2e; border: 2px solid var(--primary); 
-    color: #fff; padding: 14px 24px; border-radius: 12px; 
-    z-index: 200; font-size: 1rem; box-shadow: 0 8px 32px rgba(0,242,96,0.3); 
-    opacity: 0; transition: all 0.3s ease; pointer-events: none; max-width: 90%; text-align: center; 
-  }
-  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-  .toast.error { border-color: #ff4757; box-shadow: 0 8px 32px rgba(255,71,87,0.3); }
-
-  /* --- Меню --- */
-  #menu { text-align: center; max-width: 900px; width: 100%; padding: 40px 20px; animation: fadeIn 0.5s ease; z-index: 10; position: relative; }
-  #menu h1 { font-size: 3rem; margin-bottom: 8px; background: linear-gradient(135deg, #00f260, #0575e6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 0 30px rgba(0,242,96,0.3); }
-  #menu .subtitle { font-size: 1.1rem; color: var(--dim); margin-bottom: 30px; }
-  .menu-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
-  @media (max-width: 700px){ .menu-grid{ grid-template-columns: 1fr; } }
-  .menu-card { 
-    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); 
-    border-radius: 18px; padding: 30px 24px; cursor: pointer; transition: all 0.3s ease; 
-    text-align: center; user-select: none;
-  }
-  .menu-card:hover { background: rgba(255,255,255,0.12); transform: translateY(-6px); box-shadow: 0 12px 40px rgba(0,0,0,0.4); border-color: rgba(0,242,96,0.4); }
-  .menu-card .icon { font-size: 3rem; margin-bottom: 14px; }
-  .menu-card h2 { font-size: 1.3rem; margin-bottom: 8px; }
-  .menu-card p { font-size: 0.85rem; color: var(--dim); line-height: 1.5; }
-
-  /* --- Игровой экран --- */
-  #game-screen { display: none; flex-direction: column; align-items: center; width: 100%; max-width: 500px; padding: 30px 20px; animation: fadeIn 0.4s ease; }
-  #game-screen h2 { font-size: 1.6rem; margin-bottom: 4px; background: linear-gradient(135deg, #00f260, #0575e6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-  .hud { display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 460px; margin-bottom: 12px; }
-  .score-box { font-size: 1.2rem; font-weight: 700; color: var(--primary); }
-  .best-box { font-size: 0.85rem; color: var(--dim); }
-  .back-btn, .restart-btn { padding: 10px 22px; border-radius: 10px; cursor: pointer; font-size: 0.95rem; border: none; }
-  .back-btn { background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.2); }
-  .back-btn:hover { background: rgba(255,255,255,0.18); }
-  .restart-btn { background: linear-gradient(135deg, #00f260, #0575e6); color: #000; font-weight: 700; margin-left: 8px; }
-  .restart-btn:hover { transform: scale(1.05); box-shadow: 0 4px 20px rgba(0,242,96,0.4); }
-
-  .game-wrap { position: relative; border-radius: 14px; overflow: hidden; box-shadow: 0 0 40px rgba(0,242,96,0.15), 0 8px 32px rgba(0,0,0,0.5); touch-action: none; }
-  canvas { display: block; background: #0a0a12; border-radius: 14px; touch-action: none; }
-  
-  .overlay { 
-    position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; 
-    background: rgba(0,0,0,0.75); border-radius: 14px; gap: 10px; z-index: 10; 
-  }
-  .overlay.hidden { display: none; }
-  .overlay h3 { font-size: 2rem; color: #ff4757; text-shadow: 0 0 10px #000; text-align: center; }
-  .overlay p { font-size: 1.2rem; color: #fff; text-align: center; }
-
-  .touch-controls { display: none; margin-top: 20px; width: 200px; height: 200px; position: relative; }
-  .touch-btn { 
-    position: absolute; width: 64px; height: 64px; border-radius: 50%; 
-    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); 
-    color: #fff; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; 
-    cursor: pointer; user-select: none;
-  }
-  .touch-btn:active { background: rgba(0,242,96,0.3); }
-  .touch-btn.up { top: 0; left: 50%; transform: translateX(-50%); }
-  .touch-btn.down { bottom: 0; left: 50%; transform: translateX(-50%); }
-  .touch-btn.left { top: 50%; left: 0; transform: translateY(-50%); }
-  .touch-btn.right { top: 50%; right: 0; transform: translateY(-50%); }
-
-  /* --- Панели (Настройки/Профиль) --- */
-  .top-btns { position: absolute; top: 20px; right: 20px; display: flex; gap: 8px; z-index: 20; }
-  .icon-btn { 
-    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); 
-    color: #fff; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; 
-    font-size: 1.4rem; display: flex; align-items: center; justify-content: center; 
-    transition: all 0.2s;
-  }
-  .icon-btn:hover { background: rgba(255,255,255,0.18); transform: scale(1.1); }
-
-  #settings-panel, #profile-panel { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; }
-  #settings-panel.show, #profile-panel.show { display: flex; }
-  .panel-box { 
-    background: #1a1a2e; border: 1px solid rgba(255,255,255,0.15); border-radius: 18px; 
-    padding: 30px; max-width: 440px; width: 90%; animation: fadeIn 0.3s ease; 
-    max-height: 90vh; overflow-y: auto;
-  }
-  .panel-box h2 { font-size: 1.5rem; margin-bottom: 24px; text-align: center; color: var(--primary); }
-  .settings-group { margin-bottom: 28px; }
-  .settings-group label { display: block; font-size: 0.95rem; color: var(--dim); margin-bottom: 12px; }
-  .settings-options { display: flex; gap: 10px; flex-wrap: wrap; }
-  .settings-opt { 
-    background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1); 
-    color: #fff; padding: 10px 18px; border-radius: 10px; cursor: pointer; 
-    font-size: 0.9rem; transition: all 0.2s; user-select: none;
-  }
-  .settings-opt:hover { background: rgba(255,255,255,0.12); }
-  .settings-opt.active { border-color: var(--primary); background: rgba(0,242,96,0.15); color: var(--primary); }
-  .panel-close { 
-    width: 100%; background: linear-gradient(135deg, #00f260, #0575e6); 
-    color: #000; border: none; padding: 12px; border-radius: 10px; 
-    cursor: pointer; font-weight: 700; font-size: 1rem; margin-top: 10px;
-  }
-  .panel-close:hover { transform: scale(1.02); }
-
-  /* --- RGB КРУГ (ВАШ ЗАПРОС) --- */
-  .rgb-wheel-container {
-    margin-top: 20px;
-    text-align: center;
-  }
-  .rgb-wheel {
-    width: 200px;
-    height: 200px;
-    border-radius: 50%;
-    /* Спектральный градиент */
-    background: conic-gradient(
-      red, orange, yellow, lime, cyan, blue, violet, magenta, red
-    );
-    position: relative;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-    margin: 0 auto;
-  }
-  .rgb-wheel::after {
-    content: '';
-    position: absolute;
-    top: 25%;
-    left: 25%;
-    width: 50%;
-    height: 50%;
-    background-color: white;
-    border-radius: 50%;
-    z-index: 1;
-    box-shadow: inset 0 0 15px rgba(0,0,0,0.2);
-  }
-  .wheel-hint { font-size: 0.8rem; color: var(--dim); margin-top: 10px; }
-
-  .footer-warning { 
-    margin-top: 40px; padding: 20px; background: rgba(0,0,0,0.3); 
-    border-top: 1px dashed #444; border-bottom: 1px dashed #444; 
-    text-align: center; font-size: 0.85rem; line-height: 1.6; color: #ff5252; 
-    max-width: 500px; width: 100%;
-  }
-  .footer-warning strong { color: #fff; }
-  .footer-warning .sponsor { color: var(--primary); font-weight: 700; }
-
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family:'Segoe UI',Arial,sans-serif; background:linear-gradient(135deg,#0f0c29,#302b63,#24243e); color:#fff; min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow-x:hidden; }
+#menu { text-align:center; max-width:900px; width:100%; padding:40px 20px; animation:fadeIn .5s ease; z-index:10; position:relative; }
+#menu h1 { font-size:3rem; margin-bottom:8px; background:linear-gradient(135deg,#00f260,#0575e6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; text-shadow:0 0 30px rgba(0,242,96,.3); }
+#menu .subtitle { font-size:1.1rem; color:#888; margin-bottom:30px; }
+.menu-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; }
+@media (max-width:700px){ .menu-grid{ grid-template-columns:1fr; } }
+.menu-card { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); border-radius:18px; padding:30px 24px; cursor:pointer; transition:all .3s ease; text-align:center; user-select:none; -webkit-user-select:none; }
+.menu-card:hover { background:rgba(255,255,255,.12); transform:translateY(-6px); box-shadow:0 12px 40px rgba(0,0,0,.4); border-color:rgba(0,242,96,.4); }
+.menu-card.bump { transform:scale(1.08); background:rgba(255,215,0,.15); border-color:#ffd700; }
+.menu-card .icon { font-size:3rem; margin-bottom:14px; }
+.menu-card h2 { font-size:1.3rem; margin-bottom:8px; }
+.menu-card p { font-size:.85rem; color:#aaa; line-height:1.5; }
+#game-screen { display:none; flex-direction:column; align-items:center; width:100%; max-width:500px; padding:30px 20px; animation:fadeIn .4s ease; }
+#game-screen h2 { font-size:1.6rem; margin-bottom:4px; background:linear-gradient(135deg,#00f260,#0575e6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+#game-screen .subtitle { font-size:.9rem; color:#888; margin-bottom:18px; }
+.game-wrap { position:relative; border-radius:14px; overflow:hidden; box-shadow:0 0 40px rgba(0,242,96,.15),0 8px 32px rgba(0,0,0,.5); touch-action:none; }
+canvas { display:block; background:#0a0a12; border-radius:14px; touch-action:none; }
+.hud { display:flex; justify-content:space-between; align-items:center; width:100%; max-width:460px; margin-bottom:12px; }
+.hud-left { display:flex; flex-direction:column; gap:4px; }
+.score-box { font-size:1.2rem; font-weight:700; color:#00f260; }
+.best-box { font-size:.85rem; color:#888; }
+.best-box .new-record { color:#ffd700; font-weight:700; display:none; }
+.back-btn { background:rgba(255,255,255,.08); color:#fff; border:1px solid rgba(255,255,255,.2); padding:10px 22px; border-radius:10px; cursor:pointer; font-size:.95rem; }
+.back-btn:hover { background:rgba(255,255,255,.18); border-color:rgba(0,242,96,.5); }
+.restart-btn { background:linear-gradient(135deg,#00f260,#0575e6); color:#000; border:none; padding:10px 22px; border-radius:10px; cursor:pointer; font-weight:700; font-size:.95rem; margin-left:8px; }
+.restart-btn:hover { transform:scale(1.05); box-shadow:0 4px 20px rgba(0,242,96,.4); }
+.overlay { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(0,0,0,.75); border-radius:14px; gap:10px; z-index:10; }
+.overlay.hidden { display:none; }
+.overlay h3 { font-size:2rem; color:#ff4757; text-shadow:0 0 10px #000; text-align:center; }
+.overlay p { font-size:1.2rem; color:#fff; text-align:center; }
+.overlay .start-hint { font-size:1rem; color:#00f260; }
+.touch-controls { display:none; margin-top:20px; width:200px; height:200px; position:relative; }
+.touch-btn { position:absolute; width:64px; height:64px; border-radius:50%; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); color:#fff; font-size:1.5rem; display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none; -webkit-user-select:none; }
+.touch-btn:active { background:rgba(0,242,96,.3); }
+.touch-btn.up { top:0; left:50%; transform:translateX(-50%); }
+.touch-btn.down { bottom:0; left:50%; transform:translateX(-50%); }
+.touch-btn.left { top:50%; left:0; transform:translateY(-50%); }
+.touch-btn.right { top:50%; right:0; transform:translateY(-50%); }
+.footer-warning { margin-top:40px; padding:20px; background:rgba(0,0,0,.3); border-top:1px dashed #444; border-bottom:1px dashed #444; text-align:center; font-size:.85rem; line-height:1.6; color:#ff5252; max-width:500px; width:100%; }
+.footer-warning strong { color:#fff; }
+.footer-warning .sponsor { color:#00f260; font-weight:700; }
+.footer-warning span { color:#ccc; font-style:italic; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+.top-btns { position:absolute; top:20px; right:20px; display:flex; gap:8px; z-index:20; }
+.icon-btn { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.2); color:#fff; width:44px; height:44px; border-radius:50%; cursor:pointer; font-size:1.4rem; display:flex; align-items:center; justify-content:center; transition:all .2s; }
+.icon-btn:hover { background:rgba(255,255,255,.18); transform:scale(1.1); }
+#settings-panel, #profile-panel { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:100; align-items:center; justify-content:center; }
+#settings-panel.show, #profile-panel.show { display:flex; }
+.panel-box { background:#1a1a2e; border:1px solid rgba(255,255,255,.15); border-radius:18px; padding:30px; max-width:440px; width:90%; animation:fadeIn .3s ease; max-height:90vh; overflow-y:auto; }
+.panel-box h2 { font-size:1.5rem; margin-bottom:24px; text-align:center; color:#00f260; }
+.settings-group { margin-bottom:28px; }
+.settings-group label { display:block; font-size:.95rem; color:#aaa; margin-bottom:12px; }
+.settings-options { display:flex; gap:10px; flex-wrap:wrap; }
+.settings-opt { background:rgba(255,255,255,.05); border:2px solid rgba(255,255,255,.1); color:#fff; padding:10px 18px; border-radius:10px; cursor:pointer; font-size:.9rem; transition:all .2s; user-select:none; }
+.settings-opt:hover { background:rgba(255,255,255,.12); }
+.settings-opt.active { border-color:#00f260; background:rgba(0,242,96,.15); color:#00f260; }
+.panel-close { width:100%; background:linear-gradient(135deg,#00f260,#0575e6); color:#000; border:none; padding:12px; border-radius:10px; cursor:pointer; font-weight:700; font-size:1rem; margin-top:10px; }
+.panel-close:hover { transform:scale(1.02); }
+.color-row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+.color-swatch { width:48px; height:48px; border-radius:50%; cursor:pointer; border:3px solid transparent; transition:all .2s; }
+.color-swatch:hover { transform:scale(1.15); }
+.color-swatch.active { border-color:#fff; box-shadow:0 0 12px rgba(255,255,255,.5); }
+.custom-color-wrap { display:flex; align-items:center; gap:8px; }
+.custom-color-wrap input[type="color"] { width:48px; height:48px; border:3px solid rgba(255,255,255,.2); border-radius:50%; cursor:pointer; background:none; padding:0; -webkit-appearance:none; appearance:none; overflow:hidden; }
+.custom-color-wrap input[type="color"]::-webkit-color-swatch-wrapper { padding:0; }
+.custom-color-wrap input[type="color"]::-webkit-color-swatch { border:none; border-radius:50%; }
+.custom-color-wrap input[type="color"]::-moz-color-swatch { border:none; border-radius:50%; }
+.custom-color-wrap span { font-size:.8rem; color:#00f260; }
+.promo-row { display:flex; gap:10px; }
+.promo-row input { flex:1; background:rgba(255,255,255,.05); border:2px solid rgba(255,255,255,.1); color:#fff; padding:10px 14px; border-radius:10px; font-size:.9rem; outline:none; }
+.promo-row input:focus { border-color:#00f260; }
+.promo-row input::placeholder { color:#555; }
+.promo-btn { background:linear-gradient(135deg,#00f260,#0575e6); color:#000; border:none; padding:10px 18px; border-radius:10px; cursor:pointer; font-weight:700; font-size:.9rem; white-space:nowrap; }
+.promo-btn:hover { transform:scale(1.05); }
+.promo-hint { font-size:.75rem; color:#666; margin-top:8px; }
+.toggle-btn { background:rgba(255,255,255,.05); border:2px solid rgba(255,255,255,.1); color:#aaa; padding:10px 18px; border-radius:10px; cursor:pointer; font-size:.9rem; transition:all .2s; }
+.toggle-btn.active { border-color:#00f260; background:rgba(0,242,96,.15); color:#00f260; }
+.unlock-list { display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
+.unlock-item { background:rgba(255,255,255,.06); padding:12px 16px; border-radius:10px; border:1px solid rgba(255,255,255,.1); text-align:center; min-width:120px; transition:all .2s; }
+.unlock-item.unlocked { border-color:#00f260; background:rgba(0,242,96,.1); }
+.unlock-item .cost { color:#ff9f43; font-weight:700; }
+.stat-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(255,255,255,.08); font-size:.95rem; }
+.stat-row .stat-val { color:#00f260; font-weight:700; }
+.bonus-badge { background:rgba(0,242,96,.15); border:1px solid #00f260; padding:6px 12px; border-radius:8px; font-size:.85rem; color:#00f260; display:inline-block; margin:4px; }
+.toast { position:fixed; top:20px; left:50%; transform:translateX(-50%) translateY(-20px); background:#1a1a2e; border:2px solid #00f260; color:#fff; padding:14px 24px; border-radius:12px; z-index:200; font-size:1rem; box-shadow:0 8px 32px rgba(0,242,96,.3); opacity:0; transition:all .3s ease; pointer-events:none; max-width:90%; text-align:center; }
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+.toast.error { border-color:#ff4757; box-shadow:0 8px 32px rgba(255,71,87,.3); }
 </style>
 </head>
 <body>
 
 <div class="toast" id="toast"></div>
 
-<!-- МЕНЮ -->
 <div id="menu">
   <div class="top-btns">
     <button class="icon-btn" onclick="toggleProfile()">👤</button>
@@ -191,17 +117,21 @@
       <h2>Сапёр</h2>
       <p>Мины на поле! Ешь еду, не задевая их.</p>
     </div>
+    <div class="menu-card" data-mode="immortal">
+      <div class="icon">♾️</div>
+      <h2>Бессмертная</h2>
+      <p>При столкновении счёт сбрасывается, змея начинает заново.</p>
+    </div>
   </div>
 </div>
 
-<!-- ИГРОВОЙ ЭКРАН -->
 <div id="game-screen">
   <h2 id="game-title"></h2>
   <p class="subtitle" id="game-desc"></p>
   <div class="hud">
     <div class="hud-left">
       <div class="score-box">Счёт: <span id="score">0</span></div>
-      <div class="best-box">Рекорд: <span id="best">0</span> <span class="new-record" id="new-record" style="color:var(--accent); font-weight:bold; display:none;">🔥 новый!</span></div>
+      <div class="best-box">Рекорд: <span id="best">0</span> <span class="new-record" id="new-record">🔥 новый!</span></div>
     </div>
     <div>
       <button class="back-btn" onclick="backToMenu()">← Меню</button>
@@ -230,7 +160,6 @@
   <span class="sponsor">Игра создана при поддержке ООО «ТМЫВ ДЕНЕГ» 💰</span>
 </div>
 
-<!-- ПАНЕЛЬ НАСТРОЕК -->
 <div id="settings-panel">
   <div class="panel-box">
     <h2>⚙️ Настройки</h2>
@@ -252,467 +181,645 @@
     <div class="settings-group">
       <label>Размер поля</label>
       <div class="settings-options">
-        <div class="settings-opt active" data-setting="grid" data-value="20">🧱 20x20</div>
-        <div class="settings-opt" data-setting="grid" data-value="25">🧱 25x25</div>
-        <div class="settings-opt" data-setting="grid" data-value="30">🧱 30x30</div>
+        <div class="settings-opt" data-setting="grid" data-value="5">5×5</div>
+        <div class="settings-opt" data-setting="grid" data-value="7">7×7</div>
+        <div class="settings-opt active" data-setting="grid" data-value="10">10×10</div>
+        <div class="settings-opt" data-setting="grid" data-value="15">15×15</div>
+        <div class="settings-opt" data-setting="grid" data-value="23">23×23</div>
       </div>
     </div>
-    
-    <!-- RGB КРУГ В НАСТРОЙКАХ -->
     <div class="settings-group">
-      <label>Цветовой круг (демонстрация)</label>
-      <div class="rgb-wheel-container">
-        <div class="rgb-wheel"></div>
-        <p class="wheel-hint">Градиент создан через CSS conic-gradient</p>
+      <label>Еда</label>
+      <div class="settings-options">
+        <div class="settings-opt active" data-setting="food" data-value="apple">🍎 Яблоко</div>
+        <div class="settings-opt" data-setting="food" data-value="banana">🍌 Банан</div>
+        <div class="settings-opt" data-setting="food" data-value="cherry">🍒 Вишня</div>
+        <div class="settings-opt" data-setting="food" data-value="coffee">☕ Кофе</div>
       </div>
     </div>
-
+    <div class="settings-group">
+      <label>Цвет змейки</label>
+      <div class="color-row" id="color-row"></div>
+    </div>
+    <div class="settings-group" id="neon-group" style="display:none">
+      <label>✨ Неоновый режим</label>
+      <button class="toggle-btn" id="neon-toggle" onclick="toggleNeon()">Включить</button>
+    </div>
+    <div class="settings-group" id="rainbow-group" style="display:none">
+      <label>🌈 Радужный режим</label>
+      <button class="toggle-btn" id="rainbow-toggle" onclick="toggleRainbow()">Включить</button>
+    </div>
+    <div class="settings-group">
+      <label>🎟️ Промокод</label>
+      <div class="promo-row">
+        <input type="text" id="promo-input" placeholder="Введите код" maxlength="20" />
+        <button class="promo-btn" onclick="redeemPromo()">ОК</button>
+      </div>
+      <div class="promo-hint">Подсказка: попробуйте RGB</div>
+    </div>
     <button class="panel-close" onclick="toggleSettings()">Закрыть</button>
   </div>
 </div>
 
-<!-- ПАНЕЛЬ ПРОФИЛЯ -->
 <div id="profile-panel">
   <div class="panel-box">
     <h2>👤 Профиль</h2>
     <div class="settings-group">
-      <label>Имя игрока</label>
-      <input type="text" id="player-name" value="Игрок" style="width:100%; padding:10px; margin-top:5px; background:rgba(255,255,255,0.1); border:1px solid #444; color:#fff; border-radius:8px;">
+      <label>Статистика</label>
+      <div class="stat-row"><span>Всего игр:</span><span class="stat-val" id="stat-games">0</span></div>
+      <div class="stat-row"><span>Лучший счёт:</span><span class="stat-val" id="stat-best">0</span></div>
+      <div class="stat-row"><span>Всего очков:</span><span class="stat-val" id="stat-total">0</span></div>
+      <div class="stat-row"><span>Средний счёт:</span><span class="stat-val" id="stat-avg">0</span></div>
+    </div>
+    <div class="settings-group" id="bonuses-group" style="display:none">
+      <label>Активные бонусы</label>
+      <div id="bonus-list"></div>
     </div>
     <div class="settings-group">
-      <label>Статистика</label>
-      <div style="font-size:0.9rem; color:#aaa;">Всего игр: 12</div>
-      <div style="font-size:0.9rem; color:#aaa;">Лучший счет: 1540</div>
+      <label>Разблокированные предметы</label>
+      <div class="unlock-list" id="unlock-list"></div>
     </div>
     <button class="panel-close" onclick="toggleProfile()">Закрыть</button>
   </div>
 </div>
 
 <script>
-  // ============================================================
-  //  КОНФИГУРАЦИЯ И ПЕРЕМЕННЫЕ
-  // ============================================================
-  const canvas = document.getElementById('canvas');
-  const ctx = canvas.getContext('2d');
-  const TILE = 20; // Размер клетки
-  let GRID_W = 23; // Ширина сетки (клеток)
-  let GRID_H = 23; // Высота сетки (клеток)
-  
-  let snake = ;
-  let food = null;
-  let mines = ;
-  let direction = 'right';
-  let nextDirection = 'right';
-  let score = 0;
-  let bestScore = 0;
-  let gameRunning = false;
-  let gameLoopId = null;
-  let currentMode = 'classic';
-  let justGrew = false;
-  
-  // Элементы UI
-  const elScore = document.getElementById('score');
-  const elBest = document.getElementById('best');
-  const elNewRecord = document.getElementById('new-record');
-  const elOverlayTitle = document.getElementById('overlay-title');
-  const elOverlayText = document.getElementById('overlay-text');
-  const elGameTitle = document.getElementById('game-title');
-  const elGameDesc = document.getElementById('game-desc');
-  const elToast = document.getElementById('toast');
+// ============================================================
+//  ИНИЦИАЛИЗАЦИЯ
+// ============================================================
+var canvas = document.getElementById('canvas');
+var ctx = canvas.getContext('2d', { alpha: false });
 
-  // ============================================================
-  //  ИНИЦИАЛИЗАЦИЯ И ЗАПУСК
-  // ============================================================
-  function init() {
-    loadBestScore();
-    setupMenu();
-    setupControls();
-    setupSettings();
+var CANVAS_SIZE = 460;
+var TILE = 46;
+var GRID_W = 10;
+var GRID_H = 10;
+
+var snake, food, dx, dy, score, gameRunning, isGameOver;
+var currentMode = null;
+var pendingDx = 0, pendingDy = 0;
+var mines = [];
+var mineCount = 0;
+
+// DOM-кэш
+var elScore = document.getElementById('score');
+var elBest = document.getElementById('best');
+var elNewRecord = document.getElementById('new-record');
+var elOverlay = document.getElementById('overlay');
+var elOverlayTitle = document.getElementById('overlay-title');
+var elOverlayText = document.getElementById('overlay-text');
+var elGameScreen = document.getElementById('game-screen');
+var elMenu = document.getElementById('menu');
+var elGameTitle = document.getElementById('game-title');
+var elGameDesc = document.getElementById('game-desc');
+
+// ============================================================
+//  ТАЙМИНГ И ПЛАВНОСТЬ
+// ============================================================
+var stepInterval = 300;       // мс на логический шаг
+var lastStepTime = 0;         // когда был последний шаг
+var rafId = null;
+
+// Две копии позиций: «откуда» и «куда» — между ними интерполяция
+var renderSnake = [];   // текущие отрисовочные позиции (float)
+var prevSnake = [];     // позиции до шага (для интерполяции)
+var targetSnake = [];   // позиции после шага (куда едем)
+var justGrew = false;   // росла ли змейка на этом шаге
+
+// ============================================================
+//  НАСТРОЙКИ
+// ============================================================
+var DEFAULT_SETTINGS = {
+  theme: 'normal', control: 'buttons', grid: 10, food: 'apple',
+  snakeColor: 'default', customColor: null, neon: false, rainbow: false
+};
+function loadSettings() {
+  try { var s = JSON.parse(localStorage.getItem('snake_settings')); if (s) return Object.assign({}, DEFAULT_SETTINGS, s); } catch(e) {}
+  return Object.assign({}, DEFAULT_SETTINGS);
+}
+function saveSettings() { try { localStorage.setItem('snake_settings', JSON.stringify(settings)); } catch(e) {} }
+var settings = loadSettings();
+
+// ============================================================
+//  СТАТИСТИКА
+// ============================================================
+function loadStats() { try { var s = JSON.parse(localStorage.getItem('snake_stats')); if (s) return s; } catch(e) {} return { games:0, best:0, totalScore:0 }; }
+function saveStats() { try { localStorage.setItem('snake_stats', JSON.stringify(stats)); } catch(e) {} }
+var stats = loadStats();
+function getAvgScore() { return stats.games > 0 ? Math.round(stats.totalScore / stats.games) : 0; }
+
+// ============================================================
+//  КОСМЕТИКА
+// ============================================================
+var cosmetics = [
+  { id:'crown', name:'👑 Корона', unlockScore:20, unlocked:false },
+  { id:'horns', name:'🐂 Рога', unlockScore:40, unlocked:false },
+  { id:'halo', name:'😇 Нимб', unlockScore:60, unlocked:false },
+  { id:'star', name:'⭐ Звезда', unlockScore:80, unlocked:false },
+  { id:'fire', name:'🔥 Огненный хвост', unlockScore:100, unlocked:false }
+];
+function loadCosmetics() {
+  try { var saved = JSON.parse(localStorage.getItem('snake_cosmetics')); if (saved && Array.isArray(saved)) { cosmetics.forEach(function(c){ var f = saved.find(function(s){ return s.id===c.id; }); if (f) c.unlocked = f.unlocked; }); } } catch(e) {}
+}
+function saveCosmetics() { try { localStorage.setItem('snake_cosmetics', JSON.stringify(cosmetics.map(function(c){ return {id:c.id,unlocked:c.unlocked}; }))); } catch(e) {} }
+function checkUnlocks(finalScore) {
+  var n = []; cosmetics.forEach(function(c){ if (!c.unlocked && finalScore >= c.unlockScore) { c.unlocked = true; n.push(c); } });
+  if (n.length > 0) saveCosmetics(); return n;
+}
+loadCosmetics();
+
+// ============================================================
+//  ПРОМОКОДЫ
+// ============================================================
+var promoCodes = {
+  'RGB':       { reward:'customColor', desc:'🎨 Палитра RGB разблокирована! Выбирай любой цвет.' },
+  'TMYVDENEG': { reward:'sponsorGold', desc:'💰 Спонсорский золотой цвет разблокирован!' },
+  'SNAKEGOD':  { reward:'allCosmetics', desc:'👑 Все косметические предметы разблокированы!' },
+  'NEON':      { reward:'neon', desc:'✨ Неоновый режим разблокирован!' },
+  'RICKROLL':  { reward:'rainbow', desc:'🌈 Радужный режим разблокирован! Never gonna give you up 🎵' }
+};
+function loadRedeemedCodes() { try { return JSON.parse(localStorage.getItem('snake_promos')) || []; } catch(e) { return []; } }
+function saveRedeemedCodes() { try { localStorage.setItem('snake_promos', JSON.stringify(redeemedCodes)); } catch(e) {} }
+var redeemedCodes = loadRedeemedCodes();
+
+function showToast(msg, isError) {
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast' + (isError ? ' error' : ''); t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 3000);
+}
+function redeemPromo() {
+  var input = document.getElementById('promo-input'); var code = input.value.trim().toUpperCase();
+  if (!code) { showToast('Введите промокод', true); return; }
+  if (redeemedCodes.indexOf(code) !== -1) { showToast('Этот промокод уже активирован', true); return; }
+  if (!promoCodes[code]) { showToast('Неверный промокод', true); return; }
+  var promo = promoCodes[code]; redeemedCodes.push(code); saveRedeemedCodes();
+  if (promo.reward === 'customColor') createCustomColorInput();
+  else if (promo.reward === 'sponsorGold') createSponsorSwatch();
+  else if (promo.reward === 'allCosmetics') { cosmetics.forEach(function(c){ c.unlocked = true; }); saveCosmetics(); }
+  else if (promo.reward === 'neon') document.getElementById('neon-group').style.display = 'block';
+  else if (promo.reward === 'rainbow') document.getElementById('rainbow-group').style.display = 'block';
+  showToast(promo.desc); input.value = '';
+}
+function createCustomColorInput() {
+  if (document.getElementById('custom-color-wrap')) return;
+  var row = document.getElementById('color-row'); var wrap = document.createElement('div');
+  wrap.className = 'custom-color-wrap'; wrap.id = 'custom-color-wrap';
+  var inp = document.createElement('input'); inp.type = 'color'; inp.id = 'custom-color-input'; inp.value = settings.customColor || '#00ff00';
+  var lbl = document.createElement('span'); lbl.textContent = 'Свой'; wrap.appendChild(inp); wrap.appendChild(lbl); row.appendChild(wrap);
+  inp.addEventListener('input', function(){ settings.snakeColor = 'custom'; settings.customColor = this.value; saveSettings(); snakeColorCache = {}; document.querySelectorAll('.color-swatch').forEach(function(s){ s.classList.remove('active'); }); });
+}
+function createSponsorSwatch() {
+  if (document.getElementById('sponsor-swatch')) return;
+  var row = document.getElementById('color-row'); var sw = document.createElement('div');
+  sw.className = 'color-swatch'; sw.id = 'sponsor-swatch'; sw.dataset.colorId = 'sponsor';
+  sw.style.background = 'linear-gradient(135deg,#ffd700,#b8860b)'; sw.title = 'Спонсор Gold';
+  sw.addEventListener('click', function(){ settings.snakeColor = 'sponsor'; saveSettings(); snakeColorCache = {}; document.querySelectorAll('.color-swatch').forEach(function(s){ s.classList.remove('active'); }); sw.classList.add('active'); });
+  row.appendChild(sw);
+}
+function toggleNeon() { settings.neon = !settings.neon; saveSettings(); var btn = document.getElementById('neon-toggle'); btn.classList.toggle('active'); btn.textContent = settings.neon ? 'Включён ✨' : 'Включить'; }
+function toggleRainbow() { settings.rainbow = !settings.rainbow; saveSettings(); var btn = document.getElementById('rainbow-toggle'); btn.classList.toggle('active'); btn.textContent = settings.rainbow ? 'Включён 🌈' : 'Включить'; }
+function applyRedeemedRewards() {
+  redeemedCodes.forEach(function(code){
+    var promo = promoCodes[code]; if (!promo) return;
+    if (promo.reward === 'customColor') createCustomColorInput();
+    else if (promo.reward === 'sponsorGold') createSponsorSwatch();
+    else if (promo.reward === 'allCosmetics') { cosmetics.forEach(function(c){ c.unlocked = true; }); saveCosmetics(); }
+    else if (promo.reward === 'neon') { document.getElementById('neon-group').style.display = 'block'; if (settings.neon) { var b = document.getElementById('neon-toggle'); b.classList.add('active'); b.textContent = 'Включён ✨'; } }
+    else if (promo.reward === 'rainbow') { document.getElementById('rainbow-group').style.display = 'block'; if (settings.rainbow) { var b2 = document.getElementById('rainbow-toggle'); b2.classList.add('active'); b2.textContent = 'Включён 🌈'; } }
+  });
+}
+
+// ============================================================
+//  ЦВЕТА
+// ============================================================
+var snakeColors = [
+  { id:'default', name:'По умолчанию', head:'#00f260', tail:'#0575e6', glow:'#00f260' },
+  { id:'red',     name:'Красная',      head:'#ff4757', tail:'#c0392b', glow:'#ff4757' },
+  { id:'purple',  name:'Фиолетовая',   head:'#a55eea', tail:'#6c5ce7', glow:'#a55eea' },
+  { id:'orange',  name:'Оранжевая',    head:'#ffa502', tail:'#e67e22', glow:'#ffa502' },
+  { id:'pink',    name:'Розовая',      head:'#ff6b81', tail:'#e84393', glow:'#ff6b81' },
+  { id:'cyan',    name:'Голубая',      head:'#00d2d3', tail:'#0984e3', glow:'#00d2d3' },
+  { id:'gold',    name:'Золотая',      head:'#ffd700', tail:'#f39c12', glow:'#ffd700' },
+  { id:'white',   name:'Белая',        head:'#ffffff', tail:'#aaaaaa', glow:'#ffffff' }
+];
+(function(){
+  var row = document.getElementById('color-row');
+  snakeColors.forEach(function(c){
+    var sw = document.createElement('div'); sw.className = 'color-swatch'; sw.dataset.colorId = c.id;
+    sw.style.background = 'linear-gradient(135deg,' + c.head + ',' + c.tail + ')'; sw.title = c.name;
+    if (c.id === settings.snakeColor) sw.classList.add('active');
+    sw.addEventListener('click', function(){ settings.snakeColor = c.id; saveSettings(); snakeColorCache = {}; document.querySelectorAll('.color-swatch').forEach(function(s){ s.classList.remove('active'); }); sw.classList.add('active'); });
+    row.appendChild(sw);
+  });
+})();
+function rgbToHex(r,g,b){ return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1); }
+function hexToRgb(hex){ var r=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex); return r?{r:parseInt(r[1],16),g:parseInt(r[2],16),b:parseInt(r[3],16)}:{r:255,g:255,b:255}; }
+
+var snakeColorCache = {};
+function getCachedSnakeColors() {
+  var sc = getSnakeColorsRaw(); var key = sc.head + '|' + sc.tail;
+  if (!snakeColorCache[key]) { snakeColorCache[key] = { head: hexToRgb(sc.head), tail: hexToRgb(sc.tail), glow: sc.glow }; }
+  return snakeColorCache[key];
+}
+function getSnakeColorsRaw() {
+  if (settings.snakeColor === 'custom' && settings.customColor && redeemedCodes.indexOf('RGB') !== -1) {
+    var c = hexToRgb(settings.customColor);
+    return { head: settings.customColor, tail: rgbToHex(Math.round(c.r*0.6),Math.round(c.g*0.6),Math.round(c.b*0.6)), glow: settings.customColor };
   }
+  if (settings.snakeColor === 'sponsor' && redeemedCodes.indexOf('TMYVDENEG') !== -1) { return { head:'#ffd700', tail:'#b8860b', glow:'#ffd700' }; }
+  for (var i = 0; i < snakeColors.length; i++) { if (snakeColors[i].id === settings.snakeColor) return snakeColors[i]; }
+  return snakeColors[0];
+}
+function getThemeColors() {
+  if (settings.theme === 'bw') return { bg:'#000000' };
+  if (settings.theme === 'invert') return { bg:'#f0f0f0' };
+  return { bg:'#0a0a12' };
+}
 
-  function setupMenu() {
-    const cards = document.querySelectorAll('.menu-card');
-    cards.forEach(card => {
-      card.addEventListener('click', () => {
-        const mode = card.getAttribute('data-mode');
-        startGame(mode);
-      });
-    });
+// ============================================================
+//  UI
+// ============================================================
+function toggleSettings(){ document.getElementById('settings-panel').classList.toggle('show'); }
+function toggleProfile(){ updateProfileUI(); document.getElementById('profile-panel').classList.toggle('show'); }
+function updateProfileUI() {
+  document.getElementById('stat-games').textContent = stats.games;
+  document.getElementById('stat-best').textContent = stats.best;
+  document.getElementById('stat-total').textContent = stats.totalScore;
+  document.getElementById('stat-avg').textContent = getAvgScore();
+  var list = document.getElementById('unlock-list'); list.innerHTML = '';
+  cosmetics.forEach(function(c){ var item = document.createElement('div'); item.className = 'unlock-item' + (c.unlocked ? ' unlocked' : ''); item.innerHTML = '<div>' + (c.unlocked ? c.name : '🔒 ' + c.name) + '</div><div class="cost">' + (c.unlocked ? '✅ Открыто' : 'Нужно: ' + c.unlockScore) + '</div>'; list.appendChild(item); });
+  var bonuses = document.getElementById('bonuses-group'); var blist = document.getElementById('bonus-list'); blist.innerHTML = ''; var hasBonuses = false;
+  redeemedCodes.forEach(function(code){ var promo = promoCodes[code]; if (!promo) return; hasBonuses = true; var badge = document.createElement('span'); badge.className = 'bonus-badge'; badge.textContent = promo.desc.split('!')[0]; blist.appendChild(badge); });
+  bonuses.style.display = hasBonuses ? 'block' : 'none';
+}
+(function(){
+  document.querySelectorAll('.settings-opt').forEach(function(opt){
+    var setting = opt.dataset.setting; var value = opt.dataset.value; var checkVal = (setting === 'grid') ? parseInt(value) : value;
+    if (settings[setting] === checkVal) { document.querySelectorAll('.settings-opt[data-setting="' + setting + '"]').forEach(function(o){ o.classList.remove('active'); }); opt.classList.add('active'); }
+  });
+  applyRedeemedRewards();
+})();
+document.querySelectorAll('.settings-opt').forEach(function(opt){
+  opt.addEventListener('click', function(){
+    var setting = opt.dataset.setting; var value = opt.dataset.value;
+    settings[setting] = (setting === 'grid') ? parseInt(value) : value; saveSettings();
+    document.querySelectorAll('.settings-opt[data-setting="' + setting + '"]').forEach(function(o){ o.classList.remove('active'); }); opt.classList.add('active');
+    snakeColorCache = {};
+    if (setting === 'control') applyControlSetting();
+    if (setting === 'grid' && currentMode) { initGame(); showOverlay('Нажми любую стрелку', '', true); }
+  });
+});
+document.getElementById('promo-input').addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); redeemPromo(); } });
+function applyControlSetting() { var tc = document.getElementById('touch-controls'); tc.style.display = (window.innerWidth <= 768 && settings.control === 'buttons') ? 'block' : 'none'; }
+window.addEventListener('resize', applyControlSetting);
+
+// ============================================================
+//  ПОЛЕ
+// ============================================================
+function setupGrid() { var g = settings.grid; TILE = Math.floor(CANVAS_SIZE / g); GRID_W = g; GRID_H = g; canvas.width = TILE * GRID_W; canvas.height = TILE * GRID_H; }
+function randomStart() {
+  var horizontal = Math.random() < 0.5; var dir = Math.random() < 0.5 ? 1 : -1; var s = []; var startVal, crossVal;
+  if (horizontal) { crossVal = 1 + Math.floor(Math.random() * Math.max(1, GRID_H - 2)); startVal = dir > 0 ? 2 + Math.floor(Math.random() * Math.max(1, GRID_W - 3)) : 1 + Math.floor(Math.random() * Math.max(1, GRID_W - 3)); for (var i = 0; i < 3; i++) s.push({ x: startVal - dir * i, y: crossVal }); }
+  else { crossVal = 1 + Math.floor(Math.random() * Math.max(1, GRID_W - 2)); startVal = dir > 0 ? 2 + Math.floor(Math.random() * Math.max(1, GRID_H - 3)) : 1 + Math.floor(Math.random() * Math.max(1, GRID_H - 3)); for (var j = 0; j < 3; j++) s.push({ x: crossVal, y: startVal - dir * j }); }
+  return s;
+}
+var memePhrases = ["Опять не хватило 1 кусочка 😔","Змея сказала: «Я так не играю» 🐍","Даже кот бы сыграл лучше 🐱","Стена победила. Стена всегда побеждает 🧱","Это не твоя вина. Это баг в матрице 💊","Попробуй ещё раз!","Красиво умер 😎","БУМ! Мин сработала 💥"];
+var modeInfo = {
+  classic:  { title:'🎯 Классическая змейка', desc:'Стены и хвост убивают. Набери максимум!' },
+  mines:    { title:'💣 Змейка-сапёр',         desc:'Мины на поле! Ешь еду, не задевая их.' },
+  immortal: { title:'♾️ Бессмертная змейка',   desc:'При столкновении — сброс очков и заново.' }
+};
+var cardData = {};
+document.querySelectorAll('.menu-card').forEach(function(card){
+  var mode = card.dataset.mode;
+  card.addEventListener('click', function(){
+    if (!cardData[mode]) cardData[mode] = { count: 0, timer: null }; var d = cardData[mode]; d.count++;
+    card.classList.add('bump'); setTimeout(function(){ card.classList.remove('bump'); }, 200);
+    clearTimeout(d.timer); d.timer = setTimeout(function(){ openGame(mode); d.count = 0; }, 350);
+  });
+});
+function openGame(mode) {
+  currentMode = mode; elMenu.style.display = 'none'; elGameScreen.style.display = 'flex';
+  elGameTitle.textContent = modeInfo[mode].title; elGameDesc.textContent = modeInfo[mode].desc;
+  elBest.textContent = stats.best; elNewRecord.style.display = 'none'; applyControlSetting();
+  initGame(); showOverlay('Нажми любую стрелку', '', true);
+}
+function backToMenu() { stopGame(); elGameScreen.style.display = 'none'; elMenu.style.display = 'block'; }
+function restartCurrent() { initGame(); showOverlay('Нажми любую стрелку', '', true); }
+
+// ============================================================
+//  ИНИЦИАЛИЗАЦИЯ ИГРЫ
+// ============================================================
+function initGame() {
+  stopGame(); setupGrid();
+  snake = randomStart();
+  // Копируем позиции для рендера (float-координаты)
+  renderSnake = snake.map(function(s){ return { x: s.x, y: s.y }; });
+  prevSnake = snake.map(function(s){ return { x: s.x, y: s.y }; });
+  targetSnake = snake.map(function(s){ return { x: s.x, y: s.y }; });
+  dx = 0; dy = 0; pendingDx = 0; pendingDy = 0;
+  score = 0; gameRunning = false; isGameOver = false;
+  justGrew = false; mines = [];
+  placeFood(); updateScore(); draw();
+}
+function stopGame() { gameRunning = false; if (rafId) { cancelAnimationFrame(rafId); rafId = null; } }
+
+function placeFood() {
+  var tries = 0;
+  do { food = { x: Math.floor(Math.random()*GRID_W), y: Math.floor(Math.random()*GRID_H) }; tries++; }
+  while ((snake.some(function(s){ return s.x===food.x && s.y===food.y; }) || (currentMode === 'mines' && mines.some(function(m){ return m.x===food.x && m.y===food.y; }))) && tries < 200);
+}
+function placeMines() {
+  mines = []; var totalCells = GRID_W * GRID_H; mineCount = Math.max(3, Math.floor(totalCells * 0.15));
+  for (var i = 0; i < mineCount; i++) { var valid = false, mine = { x:0, y:0 }, attempts = 0;
+    while (!valid && attempts < 200) { mine.x = Math.floor(Math.random()*GRID_W); mine.y = Math.floor(Math.random()*GRID_H); valid = !snake.some(function(s){ return s.x===mine.x && s.y===mine.y; }) && !mines.some(function(m){ return m.x===mine.x && m.y===mine.y; }); attempts++; }
+    if (valid) mines.push(mine);
   }
+}
+function addMine() {
+  var valid = false, mine = { x:0, y:0 }, attempts = 0;
+  while (!valid && attempts < 200) { mine.x = Math.floor(Math.random()*GRID_W); mine.y = Math.floor(Math.random()*GRID_H); valid = !snake.some(function(s){ return s.x===mine.x && s.y===mine.y; }) && !mines.some(function(m){ return m.x===mine.x && m.y===mine.y; }) && !(food.x===mine.x && food.y===mine.y); attempts++; }
+  if (valid) mines.push(mine);
+}
+function updateScore() { elScore.textContent = score; }
+function showOverlay(title, text, green) { elOverlay.classList.remove('hidden'); elOverlayTitle.textContent = title; elOverlayTitle.style.color = green ? '#00f260' : '#ff4757'; elOverlayText.textContent = text; }
+function hideOverlay() { elOverlay.classList.add('hidden'); }
 
-  function startGame(mode) {
-    currentMode = mode;
-    score = 0;
-    direction = 'right';
-    nextDirection = 'right';
-    snake = ;
-    mines = ;
-    food = null;
-    justGrew = false;
-    
-    // Настройка сетки в зависимости от режима (опционально)
-    GRID_W = 23;
-    GRID_H = 23;
-    canvas.width = GRID_W * TILE;
-    canvas.height = GRID_H * TILE;
+// ============================================================
+//  ОТРИСОВКА — БЕЗ СЕТКИ, ПЛАВНЫЕ FLOAT-КООРДИНАТЫ
+// ============================================================
+function draw() {
+  var tc = getThemeColors();
+  ctx.fillStyle = tc.bg;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  drawMines();
+  drawFood();
+  drawSnake();
+}
 
-    // Генерация змейки
-    for (let i = 4; i >= 0; i--) {
-      snake.push({ x: i, y: 10 });
+function drawMines() {
+  if (currentMode !== 'mines' || mines.length === 0) return;
+  var nm = settings.neon ? 2 : 1;
+  var pulse = Math.sin(performance.now() / 300) * 0.3 + 0.7;
+  var r = Math.max(3, Math.floor(TILE / 2 - 6));
+  for (var i = 0; i < mines.length; i++) {
+    var cx = mines[i].x * TILE + TILE / 2, cy = mines[i].y * TILE + TILE / 2;
+    ctx.shadowColor = '#ff4757'; ctx.shadowBlur = 12 * pulse * nm;
+    var grad = ctx.createRadialGradient(cx, cy, 1, cx, cy, r); grad.addColorStop(0, '#ff6b6b'); grad.addColorStop(1, '#c0392b');
+    ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#c0392b';
+    for (var s = 0; s < 8; s++) { var ang = (s/8)*Math.PI*2; var sx1=cx+Math.cos(ang)*r*0.8, sy1=cy+Math.sin(ang)*r*0.8; var sx2=cx+Math.cos(ang)*r*1.3, sy2=cy+Math.sin(ang)*r*1.3; var ang2=ang+Math.PI/8; var sx3=cx+Math.cos(ang2)*r*0.8, sy3=cy+Math.sin(ang2)*r*0.8; ctx.beginPath(); ctx.moveTo(sx1,sy1); ctx.lineTo(sx2,sy2); ctx.lineTo(sx3,sy3); ctx.closePath(); ctx.fill(); }
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx, cy, Math.max(1, r*0.2), 0, Math.PI*2); ctx.fill();
+  }
+}
+
+function drawFood() {
+  var cx = food.x * TILE + TILE / 2, cy = food.y * TILE + TILE / 2;
+  var r = Math.max(4, Math.floor(TILE / 2 - 3)), ft = settings.food;
+  var pulse = Math.sin(performance.now() / 250) * 0.3 + 0.7, nm = settings.neon ? 2 : 1;
+  if (ft === 'apple') {
+    ctx.shadowColor = '#ff3838'; ctx.shadowBlur = 18 * pulse * nm;
+    var g = ctx.createRadialGradient(cx-2, cy-2, 1, cx, cy, r); g.addColorStop(0, '#ff6b6b'); g.addColorStop(1, '#c0392b');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#2ecc71'; ctx.beginPath(); ctx.ellipse(cx+3, cy-r+1, 4, 2.5, -0.4, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#8b4513'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(cx, cy-r+2); ctx.lineTo(cx, cy-r-2); ctx.stroke();
+  } else if (ft === 'banana') {
+    ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 15 * pulse * nm; ctx.fillStyle = '#ffe066';
+    ctx.beginPath(); ctx.moveTo(cx-r*0.7, cy+r*0.5); ctx.quadraticCurveTo(cx-r*0.3, cy-r*0.8, cx+r*0.6, cy-r*0.5); ctx.quadraticCurveTo(cx+r*0.3, cy+r*0.1, cx+r*0.5, cy+r*0.6); ctx.quadraticCurveTo(cx+r*0.2, cy+r*0.4, cx-r*0.3, cy+r*0.5); ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#daa520'; ctx.beginPath(); ctx.arc(cx-r*0.7, cy+r*0.5, 2, 0, Math.PI*2); ctx.fill();
+  } else if (ft === 'cherry') {
+    ctx.shadowColor = '#ff1744'; ctx.shadowBlur = 15 * pulse * nm; ctx.fillStyle = '#e91e63';
+    ctx.beginPath(); ctx.arc(cx-r*0.35, cy+r*0.25, r*0.5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx+r*0.35, cy+r*0.25, r*0.5, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.arc(cx-r*0.5, cy+r*0.1, r*0.15, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx+r*0.2, cy+r*0.1, r*0.15, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#4a7c2e'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx-r*0.3, cy-r*0.15); ctx.quadraticCurveTo(cx-r*0.1, cy-r*0.7, cx, cy-r*0.8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx+r*0.3, cy-r*0.15); ctx.quadraticCurveTo(cx+r*0.1, cy-r*0.6, cx, cy-r*0.8); ctx.stroke();
+  } else if (ft === 'coffee') {
+    var cupW = Math.max(6, Math.floor(r*1.1)), cupH = Math.max(8, Math.floor(r*1.3)), cupY = cy - cupH/2 + r*0.15;
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(cx-r*0.3, cupY-r*0.2); ctx.quadraticCurveTo(cx-r*0.5, cupY-r*0.5, cx-r*0.3, cupY-r*0.8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx+r*0.3, cupY-r*0.2); ctx.quadraticCurveTo(cx+r*0.5, cupY-r*0.5, cx+r*0.3, cupY-r*0.8); ctx.stroke();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(2, r*0.12); ctx.beginPath(); ctx.arc(cx+cupW/2+r*0.15, cy+r*0.05, r*0.25, -Math.PI*0.45, Math.PI*0.45); ctx.stroke();
+    var halfTop = cupW/2, halfBot = cupW*0.35, topY = cupY, botY = cupY + cupH;
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(cx-halfTop, topY); ctx.lineTo(cx+halfTop, topY); ctx.lineTo(cx+halfBot, botY); ctx.lineTo(cx-halfBot, botY); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#5d4037'; ctx.beginPath(); ctx.ellipse(cx, topY, halfTop-1, r*0.15, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.beginPath(); ctx.ellipse(cx-r*0.2, topY-1, halfTop*0.3, r*0.06, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.beginPath(); ctx.moveTo(cx-halfTop+2, topY+2); ctx.lineTo(cx-halfTop+4, topY+2); ctx.lineTo(cx-halfBot+3, botY-2); ctx.lineTo(cx-halfBot+1, botY-2); ctx.closePath(); ctx.fill();
+  }
+}
+
+// ============================================================
+//  ОТРИСОВКА ЗМЕЙКИ — ПЛАВНЫЕ FLOAT-КООРДИНАТЫ
+// ============================================================
+function drawSnake() {
+  ctx.shadowBlur = 0;
+  var sc = getCachedSnakeColors();
+  var nm = settings.neon ? 2 : 1;
+  var len = renderSnake.length;
+  var slMax = Math.max(len - 1, 1);
+  var now = performance.now();
+
+  for (var i = len - 1; i >= 0; i--) {
+    var seg = renderSnake[i];
+    var x = seg.x * TILE;
+    var y = seg.y * TILE;
+    var t = i / slMax;
+
+    var color;
+    if (settings.rainbow) { color = 'hsl(' + ((i * 25 + now / 20) % 360) + ',70%,55%)'; }
+    else if (settings.theme === 'bw') { var v = Math.round(255 - 170 * t); color = 'rgb(' + v + ',' + v + ',' + v + ')'; }
+    else if (settings.theme === 'invert' && settings.snakeColor === 'default') { color = 'rgb(' + Math.round(5+(0-5)*t) + ',' + Math.round(117+(242-117)*t) + ',' + Math.round(230+(96-230)*t) + ')'; }
+    else { color = 'rgb(' + Math.round(sc.head.r+(sc.tail.r-sc.head.r)*t) + ',' + Math.round(sc.head.g+(sc.tail.g-sc.head.g)*t) + ',' + Math.round(sc.head.b+(sc.tail.b-sc.head.b)*t) + ')'; }
+
+    if (i === 0) { ctx.shadowColor = settings.rainbow ? 'hsl(' + (now/20 % 360) + ',70%,55%)' : sc.glow; ctx.shadowBlur = 15 * nm; }
+
+    var pad = 2, size = TILE - pad * 2, radius = Math.min(6, size / 3);
+    ctx.fillStyle = color;
+    roundRect(ctx, x + pad, y + pad, size, size, radius); ctx.fill();
+
+    if (i === len - 1 && i > 0) {
+      var fireC = null;
+      for (var k = 0; k < cosmetics.length; k++) { if (cosmetics[k].id === 'fire' && cosmetics[k].unlocked) { fireC = cosmetics[k]; break; } }
+      if (fireC) { ctx.shadowColor = '#ff4500'; ctx.shadowBlur = 10 * nm; ctx.fillStyle = '#ff6b35'; ctx.beginPath(); ctx.arc(x+TILE/2, y+TILE/2, Math.max(2, size/4), 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0; }
     }
-
-    // Генерация мин (если режим сапёр)
-    if (mode === 'mines') {
-      generateMines(10);
-    }
-
-    // Генерация первой еды (ИСПРАВЛЕНО)
-    placeFood();
-
-    // UI обновления
-    document.getElementById('menu').style.display = 'none';
-    document.getElementById('game-screen').style.display = 'flex';
-    document.getElementById('touch-controls').style.display = 'none'; // Пока выключено для простоты, можно включить
-    
-    elScore.innerText = score;
-    elNewRecord.style.display = 'none';
-    
-    elGameTitle.innerText = mode === 'classic' ? 'Классическая Змейка' : 'Режим Сапёр';
-    elGameDesc.innerText = mode === 'classic' ? 'Избегай стен и своего хвоста.' : 'Не наступи на мину!';
-
-    // Первый кадр
-    draw();
-    
-    // Запуск цикла
-    gameRunning = true;
-    gameLoopId = setInterval(gameLoop, 100);
+    if (i === 0) { ctx.shadowBlur = 0; drawEyes(x, y); drawCosmetics(x, y); }
   }
+}
 
-  function backToMenu() {
-    gameRunning = false;
-    clearInterval(gameLoopId);
-    document.getElementById('game-screen').style.display = 'none';
-    document.getElementById('menu').style.display = 'block';
+function drawCosmetics(x, y) {
+  var cx = x + TILE/2, cy = y + TILE/2, r = Math.max(4, TILE/2 - 3);
+  for (var i = 0; i < cosmetics.length; i++) {
+    var c = cosmetics[i]; if (!c.unlocked) continue;
+    if (c.id === 'crown') { ctx.fillStyle = '#ffd700'; ctx.beginPath(); ctx.moveTo(cx-r*0.6, cy-r*0.5); ctx.lineTo(cx-r*0.6, cy-r*0.8); ctx.lineTo(cx-r*0.3, cy-r*0.6); ctx.lineTo(cx, cy-r*0.8); ctx.lineTo(cx+r*0.3, cy-r*0.6); ctx.lineTo(cx+r*0.6, cy-r*0.8); ctx.lineTo(cx+r*0.6, cy-r*0.5); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.arc(cx, cy-r*0.7, 1.5, 0, Math.PI*2); ctx.fill(); }
+    else if (c.id === 'horns') { ctx.fillStyle = '#8b4513'; ctx.beginPath(); ctx.ellipse(cx-r*0.5, cy-r*0.6, r*0.15, r*0.3, -0.3, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(cx+r*0.5, cy-r*0.6, r*0.15, r*0.3, 0.3, 0, Math.PI*2); ctx.fill(); }
+    else if (c.id === 'halo') { ctx.strokeStyle = '#fffde7'; ctx.lineWidth = 2; ctx.shadowColor = '#fffde7'; ctx.shadowBlur = 8; ctx.beginPath(); ctx.ellipse(cx, cy-r*0.7, r*0.5, r*0.15, 0, 0, Math.PI*2); ctx.stroke(); ctx.shadowBlur = 0; }
+    else if (c.id === 'star') { ctx.fillStyle = '#ffd700'; ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 6; ctx.beginPath(); for (var k = 0; k < 5; k++) { var a = -Math.PI/2 + k*Math.PI*2/5; var px = cx+Math.cos(a)*r*0.3, py = cy-r*0.6+Math.sin(a)*r*0.3; if (k===0) ctx.moveTo(px,py); else ctx.lineTo(px,py); a += Math.PI/5; px = cx+Math.cos(a)*r*0.12; py = cy-r*0.6+Math.sin(a)*r*0.12; ctx.lineTo(px,py); } ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0; }
   }
+}
 
-  function restartCurrent() {
-    startGame(currentMode);
-  }
+function drawEyes(x, y) {
+  var cx = x + TILE/2, cy = y + TILE/2;
+  var off = Math.max(3, TILE/6), eyeR = Math.max(2, TILE/8), pupilR = Math.max(1, TILE/16);
+  var ex1, ey1, ex2, ey2;
+  if (dx === 1) { ex1=cx+3; ey1=cy-off; ex2=cx+3; ey2=cy+off; }
+  else if (dx === -1) { ex1=cx-3; ey1=cy-off; ex2=cx-3; ey2=cy+off; }
+  else if (dy === -1) { ex1=cx-off; ey1=cy-3; ex2=cx+off; ey2=cy-3; }
+  else { ex1=cx-off; ey1=cy+3; ex2=cx+off; ey2=cy+3; }
+  var ew = (settings.theme === 'invert') ? '#000' : '#fff';
+  var pu = (settings.theme === 'invert') ? '#fff' : '#000';
+  ctx.fillStyle = ew; ctx.beginPath(); ctx.arc(ex1, ey1, eyeR, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(ex2, ey2, eyeR, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = pu; ctx.beginPath(); ctx.arc(ex1, ey1, pupilR, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(ex2, ey2, pupilR, 0, Math.PI*2); ctx.fill();
+}
 
-  // ============================================================
-  //  ЛОГИКА ИГРЫ (ГЛАВНЫЙ ЦИКЛ)
-  // ============================================================
-  function gameLoop() {
-    if (!gameRunning) return;
+function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x+r, y); ctx.arcTo(x+w, y, x+w, y+h, r); ctx.arcTo(x+w, y+h, x, y+h, r); ctx.arcTo(x, y+h, x, y, r); ctx.arcTo(x, y, x+w, y, r); ctx.closePath(); }
 
-    // Обработка направления
-    direction = nextDirection;
+// ============================================================
+//  ЛОГИКА — ОБНОВЛЕНИЕ ЛОГИЧЕСКИХ ПОЗИЦИЙ
+// ============================================================
+function update() {
+  // Сохраняем текущие позиции как «откуда»
+  prevSnake = snake.map(function(s){ return { x: s.x, y: s.y }; });
 
-    // Движение головы
-    const head = { x: snake.x, y: snake.y };
-    switch (direction) {
-      case 'up': head.y--; break;
-      case 'down': head.y++; break;
-      case 'left': head.x--; break;
-      case 'right': head.x++; break;
-    }
+  dx = pendingDx; dy = pendingDy;
+  var head = { x: snake[0].x + dx, y: snake[0].y + dy };
 
-    // Проверка столкновений
-    if (checkCollision(head)) {
-      gameOver(false);
-      return;
-    }
-
-    // Проверка еды
-    if (head.x === food.x && head.y === food.y) {
-      score += 10;
-      elScore.innerText = score;
-      justGrew = true;
-      placeFood(); // <--- ВОТ ЗДЕСЬ ВЫЗЫВАЕТСЯ ИСПРАВЛЕННАЯ ФУНКЦИЯ
-    } else {
-      snake.pop(); // Удаляем хвост, если не ели
-    }
-
-    // Добавляем новую голову
-    snake.unshift(head);
-    justGrew = false;
-
-    draw();
-  }
-
-  function checkCollision(head) {
-    // 1. Стены
-    if (head.x < 0 || head.x >= GRID_W || head.y < 0 || head.y >= GRID_H) {
-      return true;
-    }
-    // 2. Свой хвост
-    for (let i = 0; i < snake.length; i++) {
-      if (head.x === snake[i].x && head.y === snake[i].y) {
-        return true;
-      }
-    }
-    // 3. Мины (режим сапёр)
-    if (currentMode === 'mines') {
-      for (let i = 0; i < mines.length; i++) {
-        if (head.x === mines[i].x && head.y === mines[i].y) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  function gameOver(win) {
-    gameRunning = false;
-    clearInterval(gameLoopId);
-    const overlay = document.getElementById('overlay');
-    overlay.classList.remove('hidden');
-    
-    if (win) {
-      elOverlayTitle.innerText = 'Победа! 🎉';
-      elOverlayText.innerText = 'Поле очищено!';
-    } else {
-      elOverlayTitle.innerText = 'Игра окончена 😵';
-      elOverlayText.innerText = 'Попробуй еще раз!';
-      
-      // Сохранение рекорда
-      if (score > bestScore) {
-        bestScore = score;
-        saveBestScore();
-        elNewRecord.style.display = 'inline';
-      }
-      elBest.innerText = bestScore;
+  if (currentMode === 'classic') {
+    if (head.x < 0 || head.x >= GRID_W || head.y < 0 || head.y >= GRID_H || checkSelfCollision(head)) { gameOver(); return; }
+  } else if (currentMode === 'mines') {
+    if (head.x < 0) head.x = GRID_W-1; if (head.x >= GRID_W) head.x = 0;
+    if (head.y < 0) head.y = GRID_H-1; if (head.y >= GRID_H) head.y = 0;
+    if (checkSelfCollision(head) || checkMineCollision(head)) { gameOver(); return; }
+  } else if (currentMode === 'immortal') {
+    if (head.x < 0 || head.x >= GRID_W || head.y < 0 || head.y >= GRID_H || checkSelfCollision(head)) {
+      score = 0; updateScore(); snake = randomStart();
+      prevSnake = snake.map(function(s){ return { x: s.x, y: s.y }; });
+      renderSnake = snake.map(function(s){ return { x: s.x, y: s.y }; });
+      dx = 0; dy = 0; pendingDx = 0; pendingDy = 0; placeFood(); gameRunning = false;
+      showOverlay('Ой! Сброс очков', 'Нажми стрелку, чтобы продолжить', true); return;
     }
   }
 
-  // ============================================================
-  //  ГЕНЕРАЦИЯ ЕДЫ (ИСПРАВЛЕННАЯ ВЕРСИЯ)
-  // ============================================================
-  function placeFood() {
-    const occupied = {};
-    
-    // 1. Помечаем змейку
-    snake.forEach(part => {
-      occupied[`${part.x},${part.y}`] = true;
-    });
+  snake.unshift(head);
+  if (head.x === food.x && head.y === food.y) {
+    score++; updateScore(); placeFood(); justGrew = true;
+    if (currentMode === 'mines') addMine();
+  } else { snake.pop(); justGrew = false; }
 
-    // 2. Помечаем мины
-    if (currentMode === 'mines') {
-      mines.forEach(mine => {
-        occupied[`${mine.x},${mine.y}`] = true;
-      });
-    }
+  // Обновляем targetSnake — куда едем
+  targetSnake = snake.map(function(s){ return { x: s.x, y: s.y }; });
 
-    // 3. Собираем свободные клетки
-    const free = ;
-    for (let x = 0; x < GRID_W; x++) {
-      for (let y = 0; y < GRID_H; y++) {
-        if (!occupied[`${x},${y}`]) {
-          free.push({ x, y });
-        }
-      }
-    }
-
-    // 4. Выбираем случайную
-    if (free.length > 0) {
-      const randomIndex = Math.floor(Math.random() * free.length);
-      food = free[randomIndex];
-    } else {
-      // Если поле заполнено (редкий случай)
-      food = null;
-      gameOver(true);
-    }
+  // Если змейка выросла, добавляем новый сегмент в prevSnake (он появится плавно)
+  if (justGrew && targetSnake.length > prevSnake.length) {
+    // Новый хвостовой сегмент: его «откуда» = текущий хвост (стоит на месте)
+    var lastTarget = targetSnake[targetSnake.length - 1];
+    prevSnake.push({ x: lastTarget.x, y: lastTarget.y });
   }
+}
 
-  function generateMines(count) {
-    mines = ;
-    while (mines.length < count) {
-      const x = Math.floor(Math.random() * GRID_W);
-      const y = Math.floor(Math.random() * GRID_H);
-      
-      // Проверка, чтобы мина не появилась на змейке
-      const isOnSnake = snake.some(s => s.x === x && s.y === y);
-      const isOnMine = mines.some(m => m.x === x && m.y === y);
-      
-      if (!isOnSnake && !isOnMine) {
-        mines.push({ x, y });
-      }
-    }
-  }
+function checkSelfCollision(head) { for (var i = 0; i < snake.length; i++) { if (snake[i].x === head.x && snake[i].y === head.y) return true; } return false; }
+function checkMineCollision(head) { for (var i = 0; i < mines.length; i++) { if (mines[i].x === head.x && mines[i].y === head.y) return true; } return false; }
 
-  // ============================================================
-  //  ОТРИСОВКА
-  // ============================================================
-  function draw() {
-    // Очистка
-    ctx.fillStyle = '#0a0a12';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+function gameOver() {
+  stopGame(); stats.games++; stats.totalScore += score;
+  var isNew = false; if (score > stats.best) { stats.best = score; isNew = true; } saveStats();
+  var newItems = checkUnlocks(score);
+  var phrase = memePhrases[Math.floor(Math.random() * memePhrases.length)];
+  var msg = phrase + ' | Счёт: ' + score;
+  if (isNew) msg += ' | 🏆 Новый рекорд!';
+  if (newItems.length > 0) msg += ' | 🎁 Открыто: ' + newItems.map(function(c){ return c.name; }).join(', ');
+  showOverlay('Игра окончена', msg); elBest.textContent = stats.best;
+  if (isNew) elNewRecord.style.display = 'inline';
+  score = 0; updateScore(); isGameOver = true;
+}
 
-    // Рисуем змейку
-    snake.forEach((part, index) => {
-      ctx.fillStyle = index === 0 ? '#00f260' : '#0575e6'; // Голова ярче
-      ctx.fillRect(part.x * TILE, part.y * TILE, TILE - 2, TILE - 2);
-      
-      // Глаза для головы
-      if (index === 0) {
-        ctx.fillStyle = '#fff';
-        const eyeSize = 4;
-        const offset = 4;
-        ctx.fillRect((part.x * TILE) + offset, (part.y * TILE) + offset, eyeSize, eyeSize);
-        ctx.fillRect((part.x * TILE) + TILE - offset - eyeSize, (part.y * TILE) + offset, eyeSize, eyeSize);
-      }
-    });
+// ============================================================
+//  ГЛАВНЫЙ ЦИКЛ — requestAnimationFrame + ИНТЕРПОЛЯЦИЯ
+// ============================================================
+//  Логика шагает каждые 300 мс.
+//  Между шагами renderSnake плавно интерполируется
+//  от prevSnake к targetSnake — змейка скользит без рывков.
+//  Отрисовка на частоте экрана (60/90/120 FPS).
+// ============================================================
+function gameLoop(timestamp) {
+  if (!gameRunning) return;
 
-    // Рисуем еду (ЯБЛОКО)
-    if (food) {
-      ctx.fillStyle = '#ff4757'; // Красный цвет яблока
-      ctx.fillRect(food.x * TILE, food.y * TILE, TILE - 2, TILE - 2);
-      // Листик
-      ctx.fillStyle = '#2ecc71';
-      ctx.beginPath();
-      ctx.arc((food.x * TILE) + TILE/2, (food.y * TILE) + TILE/4, 4, 0, Math.PI * 2);
-      ctx.fill();
-    }
+  var elapsed = timestamp - lastStepTime;
+  var progress = elapsed / stepInterval;
+  if (progress > 1) progress = 1;
 
-    // Рисуем мины
-    if (currentMode === 'mines') {
-      mines.forEach(mine => {
-        ctx.fillStyle = '#e74c3c';
-        ctx.fillRect(mine.x * TILE, mine.y * TILE, TILE - 2, TILE - 2);
-        // Крестик на мине
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(mine.x * TILE + 4, mine.y * TILE + 4);
-        ctx.lineTo(mine.x * TILE + TILE - 4, mine.y * TILE + TILE - 4);
-        ctx.moveTo(mine.x * TILE + TILE - 4, mine.y * TILE + 4);
-        ctx.lineTo(mine.x * TILE + 4, mine.y * TILE + TILE - 4);
-        ctx.stroke();
-      });
+  // Интерполяция: плавно двигаем renderSnake от prev к target
+  var len = renderSnake.length;
+  var tLen = targetSnake.length;
+  for (var i = 0; i < len; i++) {
+    if (i < prevSnake.length && i < tLen) {
+      renderSnake[i].x = prevSnake[i].x + (targetSnake[i].x - prevSnake[i].x) * progress;
+      renderSnake[i].y = prevSnake[i].y + (targetSnake[i].y - prevSnake[i].y) * progress;
+    } else if (i < tLen) {
+      renderSnake[i].x = targetSnake[i].x;
+      renderSnake[i].y = targetSnake[i].y;
     }
   }
 
-  // ============================================================
-  //  УПРАВЛЕНИЕ
-  // ============================================================
-  function setupControls() {
-    // Клавиатура
-    document.addEventListener('keydown', (e) => {
-      if (!gameRunning) return;
-      
-      const key = e.key.toLowerCase();
-      const opposite = { up: 'down', down: 'up', left: 'right', right: 'left' };
-      
-      if ((key === 'w' || key === 'arrowup') && direction !== opposite.up) nextDirection = 'up';
-      if ((key === 's' || key === 'arrowdown') && direction !== opposite.down) nextDirection = 'down';
-      if ((key === 'a' || key === 'arrowleft') && direction !== opposite.left) nextDirection = 'left';
-      if ((key === 'd' || key === 'arrowright') && direction !== opposite.right) nextDirection = 'right';
-    });
-
-    // Кнопки на экране (тач)
-    const buttons = document.querySelectorAll('.touch-btn');
-    buttons.forEach(btn => {
-      btn.addEventListener('mousedown', (e) => e.preventDefault()); // Блокировка выделения текста
-      btn.addEventListener('click', () => {
-        if (!gameRunning) return;
-        const dir = btn.getAttribute('data-dir');
-        const opposite = { up: 'down', down: 'up', left: 'right', right: 'left' };
-        if (direction !== opposite[dir]) {
-          nextDirection = dir;
-        }
-      });
-    });
-
-    // Свайпы (базовая реализация)
-    let touchStartX = 0;
-    let touchStartY = 0;
-    
-    canvas.addEventListener('touchstart', (e) => {
-      const touch = e.touches;
-      touchStartX = touch.clientX;
-      touchStartY = touch.clientY;
-    }, {passive: false});
-
-    canvas.addEventListener('touchend', (e) => {
-      if (!gameRunning) return;
-      const touch = e.changedTouches;
-      const dx = touch.clientX - touchStartX;
-      const dy = touch.clientY - touchStartY;
-      const absX = Math.abs(dx);
-      const absY = Math.abs(dy);
-      
-      if (absX > absY) {
-        // Горизонтальный свайп
-        if (dx > 0 && direction !== 'left') nextDirection = 'right';
-        if (dx < 0 && direction !== 'right') nextDirection = 'left';
-      } else {
-        // Вертикальный свайп
-        if (dy > 0 && direction !== 'up') nextDirection = 'down';
-        if (dy < 0 && direction !== 'down') nextDirection = 'up';
-      }
-    }, {passive: false});
-  }
-
-  // ============================================================
-  //  ИНТЕРФЕЙС (Настройки, Профиль)
-  // ============================================================
-  function toggleSettings() {
-    const panel = document.getElementById('settings-panel');
-    panel.classList.toggle('show');
-  }
-
-  function toggleProfile() {
-    const panel = document.getElementById('profile-panel');
-    panel.classList.toggle('show');
-  }
-
-  function setupSettings() {
-    const opts = document.querySelectorAll('.settings-opt');
-    opts.forEach(opt => {
-      opt.addEventListener('click', () => {
-        // Убираем активный класс у всех в группе
-        const group = opt.closest('.settings-group');
-        const groupOpts = group.querySelectorAll('.settings-opt');
-        groupOpts.forEach(o => o.classList.remove('active'));
-        
-        // Добавляем текущему
-        opt.classList.add('active');
-        
-        const setting = opt.getAttribute('data-setting');
-        const value = opt.getAttribute('data-value');
-        
-        // Здесь можно добавить логику сохранения настроек
-        console.log(`Setting changed: ${setting} = ${value}`);
-      });
-    });
-  }
-
-  function showToast(msg, isError = false) {
-    const toast = document.getElementById('toast');
-    toast.innerText = msg;
-    toast.className = 'toast show';
-    if (isError) toast.classList.add('error');
-    setTimeout(() => {
-      toast.classList.remove('show');
-      toast.classList.remove('error');
-    }, 3000);
-  }
-
-  function loadBestScore() {
-    const stored = localStorage.getItem('snake_best_score');
-    if (stored) {
-      bestScore = parseInt(stored);
-      elBest.innerText = bestScore;
+  // Время шагать
+  if (elapsed >= stepInterval) {
+    lastStepTime = timestamp;
+    update();
+    // Синхронизируем renderSnake с новым размером
+    if (renderSnake.length !== targetSnake.length) {
+      renderSnake = targetSnake.map(function(s){ return { x: s.x, y: s.y }; });
     }
   }
 
-  function saveBestScore() {
-    localStorage.setItem('snake_best_score', bestScore.toString());
+  draw();
+  rafId = requestAnimationFrame(gameLoop);
+}
+
+function startLoop() {
+  if (gameRunning) return;
+  gameRunning = true; hideOverlay();
+  if (currentMode === 'mines' && mines.length === 0) placeMines();
+  lastStepTime = performance.now();
+  rafId = requestAnimationFrame(gameLoop);
+}
+
+// ============================================================
+//  УПРАВЛЕНИЕ
+// ============================================================
+function handleDirection(ndx, ndy) {
+  if (!currentMode || elGameScreen.style.display === 'none') return;
+  if (isGameOver) { initGame(); }
+  if (ndx !== 0 && ndx === -dx && dy === 0) return;
+  if (ndy !== 0 && ndy === -dy && dx === 0) return;
+  pendingDx = ndx; pendingDy = ndy;
+  if (!gameRunning) startLoop();
+}
+
+window.addEventListener('keydown', function(e) {
+  var key = e.key.toLowerCase(); var ndx = 0, ndy = 0;
+  switch (key) {
+    case 'w': case 'ц': case 'arrowup':    ndy = -1; break;
+    case 's': case 'ы': case 'arrowdown':  ndy =  1; break;
+    case 'a': case 'ф': case 'arrowleft':  ndx = -1; break;
+    case 'd': case 'в': case 'arrowright': ndx =  1; break;
+    default: return;
   }
+  e.preventDefault(); handleDirection(ndx, ndy);
+});
 
-  // Запуск при загрузке
-  init();
+document.querySelectorAll('.touch-btn').forEach(function(btn) {
+  var dir = btn.dataset.dir;
+  var handler = function(e) { e.preventDefault(); if (dir==='up') handleDirection(0,-1); else if (dir==='down') handleDirection(0,1); else if (dir==='left') handleDirection(-1,0); else if (dir==='right') handleDirection(1,0); };
+  btn.addEventListener('touchstart', handler, { passive: false }); btn.addEventListener('click', handler);
+});
 
+var touchStartX = 0, touchStartY = 0; var gameWrap = document.getElementById('game-wrap');
+gameWrap.addEventListener('touchstart', function(e){ e.preventDefault(); touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; }, { passive: false });
+gameWrap.addEventListener('touchmove', function(e){ e.preventDefault(); }, { passive: false });
+gameWrap.addEventListener('touchend', function(e){ e.preventDefault(); var dxt = e.changedTouches[0].clientX - touchStartX; var dyt = e.changedTouches[0].clientY - touchStartY; if (Math.abs(dxt)<20 && Math.abs(dyt)<20) return; if (Math.abs(dxt)>Math.abs(dyt)) handleDirection(dxt>0?1:-1, 0); else handleDirection(0, dyt>0?1:-1); }, { passive: false });
+
+applyControlSetting();
 </script>
 </body>
 </html>
